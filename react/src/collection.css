@@ -1,0 +1,142 @@
+
+
+/* ──────────────────────────────────────────────
+   Fragrance Library – Collection Page Styles
+   Based on Figma “Fragrance Library” mock‑up
+   (adjust variables if brand colors / fonts differ)
+─────────────────────────────────────────────── */
+
+:root {
+  --clr-bg: #f8f8f7;
+  --clr-card-bg: #ffffff;
+  --clr-primary: #222222;
+  --clr-secondary: #666666;
+  --clr-accent: #e0dede;
+  --clr-border: #e7e7e7;
+}
+
+.collection-page {
+  padding: 2rem 6vw;
+  background: var(--clr-bg);
+  min-height: 100vh;
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  color: var(--clr-primary);
+}
+
+/* ---------- Header ---------- */
+.collection-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.collection-header .title {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.search-input {
+  width: min(500px, 90vw);
+  padding: 0.75rem 1.25rem;
+  border: 1px solid var(--clr-border);
+  border-radius: 12px;
+  font-size: 1rem;
+  background: #fff;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--clr-secondary);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ---------- Grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 2rem 1.5rem;
+}
+
+/* ---------- Card ---------- */
+.card {
+  background: var(--clr-card-bg);
+  border-radius: 16px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.25rem 1rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.card-img {
+  width: 100%;
+  height: 220px;
+  object-fit: contain;
+  margin-bottom: 1rem;
+}
+
+.card-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0.25rem 0;
+}
+
+.card-brand {
+  font-size: 0.9rem;
+  color: var(--clr-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.notes li {
+  font-size: 0.75rem;
+  background: var(--clr-accent);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.rating {
+  margin-top: auto;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--clr-secondary);
+}
+
+/* ---------- Responsive tweaks ---------- */
+@media (min-width: 768px) {
+  .collection-header {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .search-input {
+    width: 320px;
+  }
+}
