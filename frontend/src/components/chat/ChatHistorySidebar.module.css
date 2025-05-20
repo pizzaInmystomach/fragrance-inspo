@@ -1,0 +1,100 @@
+.sidebar {
+    width: 300px;
+    background-color: #fff;
+    border-left: 1px solid #e0d6e4;
+    position: fixed;
+    right: 0;
+    height: calc(100vh - 113px);
+    overflow-y: auto;
+}
+.expanded {
+    width: 300px;
+}
+.collapsed {
+    width: 80px;
+}
+.toggleButton {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6a4f6b;
+    z-index: 10;
+}
+.sidebarContent {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.newChatButton {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    gap: 10px;
+    padding: 10px 0;
+    margin: 15px 20px;
+    color: #6a4f6b;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.newChatButton:hover {
+    color: #583a59;
+}
+.newChatButton svg {
+    width: 20px;
+    height: 20px;
+}
+.chatHistoryList {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.chatHistoryList p {
+    font-size: 0.8rem;
+    color: #6a4f6b60;
+    margin: 10px 20px;
+}
+.chatHistoryItem {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: background-color 0.3s ease;
+}
+.chatHistoryItem:hover {
+    background-color: rgba(106, 79, 107, 0.1);
+}
+.chatTitle {
+    font-size: 0.9rem;
+    color: #6a4f6b;
+    margin-bottom: 5px;
+}
+.chatTimestamp {
+    font-size: 0.7rem;
+    color: #888;
+}
+.chatTitleCollapsed {
+    font-weight: bold;
+    color: #6a4f6b;
+    text-transform: uppercase;
+}
+
+/* Scrollbar styling */
+.chatHistoryList::-webkit-scrollbar {
+    width: 8px;
+}
+.chatHistoryList::-webkit-scrollbar-track {
+    background: #f1e6f3;
+}
+.chatHistoryList::-webkit-scrollbar-thumb {
+    background-color: #6a4f6b;
+    border-radius: 4px;
+}

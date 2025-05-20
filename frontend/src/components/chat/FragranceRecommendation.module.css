@@ -1,0 +1,81 @@
+.recommendationContainer {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.recommendationTitle {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #6a4f6b;
+    font-size: 1.2rem;
+}
+.fragranceGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+.fragranceCard {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+.fragranceCard:hover {
+    transform: scale(1.03);
+}
+.fragranceImageContainer {
+    position: relative;
+    padding-top: 120%;
+    background-color: #fdf6ff;
+}
+.fragranceImage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.favoriteButton {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.favoriteButton:hover {
+    background-color: rgba(255, 255, 255, 1);
+}
+.favoriteButton svg {
+    stroke: #6a4f6b;
+    width: 20px;
+    height: 20px;
+}
+.fragranceDetails {
+    padding: 15px;
+    text-align: center;
+}
+.fragranceName {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6a4f6b;
+    margin-bottom: 5px;
+}
+.fragranceBrand {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 5px;
+}
+.fragranceCategories {
+    font-size: 0.8rem;
+    color: #aaa;
+}

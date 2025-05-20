@@ -1,0 +1,43 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 35px;
+    background-color: #f7f0fa;
+    border-bottom: 1px solid #e0d6e4;
+    height: 71px;
+}
+.logo .logoText {
+    font-size: 20px;
+    font-weight: 600;
+    color: #6a4f6b;
+    cursor: pointer;
+}
+.bookmarkIcon {
+    color: #6a4f6b;
+    cursor: pointer;
+}
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.searchButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6a4f6b;
+}
+.profileButton {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #6a4f6b;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+}
