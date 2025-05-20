@@ -1,0 +1,20 @@
+{
+  "name": "fragrance-inspo",
+  "version": "1.0.0",
+  "description": "Fragrance Inspo 是一個創新的香水推薦應用，基於角色分析來推薦香水。使用者可以輸入任何角色名稱（名人、影視作品角色、二次元角色等），系統會分析該角色的個性特點，然後推薦與之匹配的香水。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ying0607/fragrance-inspo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ying0607/fragrance-inspo/issues"
+  },
+  "homepage": "https://github.com/ying0607/fragrance-inspo#readme"
+}
