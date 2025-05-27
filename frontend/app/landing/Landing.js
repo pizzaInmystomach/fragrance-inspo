@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './Landing.module.css';
+import MainLayout from '../MainLayout';
 
 export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -41,7 +42,7 @@ export default function Landing() {
   };
 
   return (
-    <>
+    <MainLayout>
       <section className={styles.hero}>
         <div className={styles.container}>
           <h1>Your Personality.<br />Bottled</h1>
@@ -186,6 +187,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-    </>
+    </MainLayout>
   );
 }
