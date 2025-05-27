@@ -64,15 +64,18 @@ html {
 .hero {
     padding: 80px 0;
     text-align: left;
+    font-family: "Kanit", sans-serif;
+    font-weight: 700;
+    font-style: normal;
     /* 移除hero背景色 */
 }
 
 .hero h1 {
+    margin-bottom: 20px;
+    line-height: 1.2;
     font-size: 3.5rem;
     font-weight: 700;
     color: white;
-    margin-bottom: 20px;
-    line-height: 1.2;
 }
 
 .ctaButton {
