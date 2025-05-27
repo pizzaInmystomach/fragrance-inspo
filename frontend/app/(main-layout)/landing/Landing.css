@@ -1,14 +1,64 @@
-css * {
+/* 通用設定 - 強制覆蓋所有背景 */
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Arial', sans-serif;
 }
 
+/* 強制統一背景 */
+html,
+body,
+section,
+div,
+header,
+main,
+footer,
+.container,
+.hero,
+.how-it-works,
+.features,
+.testimonials,
+.faq {
+    background: transparent !important;
+}
+
+/* 極端方案：強制所有元素透明 */
+* {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+html {
+    background: linear-gradient(135deg, #e0d0f0 0%, #c8b6e2 100%) !important;
+    min-height: 100% !important;
+}
+
+/* 重新設置需要背景或邊框的元素 */
+.feature-card,
+.testimonial-slide,
+.faq-item {
+    background: transparent !important;
+}
+
+.logo-filled {
+    background-color: white !important;
+}
+
+.author-avatar {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.faq-icon {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
 body {
-    background: linear-gradient(135deg, #e0d0f0 0%, #c8b6e2 100%);
+    background: linear-gradient(135deg, #e0d0f0 0%, #c8b6e2 100%) !important;
     color: #333;
     line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh !important;
 }
 
 .container {
@@ -17,10 +67,12 @@ body {
     padding: 0 20px;
 }
 
-/* Header Styles */
+/* Header */
 header {
     padding: 20px 0;
+    background: transparent !important;
     position: relative;
+    z-index: 100;
 }
 
 nav {
@@ -34,19 +86,20 @@ nav {
     align-items: center;
 }
 
-.logo-circle {
+.logo-circle,
+.logo-filled {
     width: 30px;
     height: 30px;
-    border: 2px solid white;
     border-radius: 50%;
+}
+
+.logo-circle {
+    border: 2px solid white;
     margin-right: 5px;
 }
 
 .logo-filled {
-    width: 30px;
-    height: 30px;
     background-color: white;
-    border-radius: 50%;
 }
 
 .nav-links {
@@ -64,10 +117,11 @@ nav {
     font-weight: 600;
 }
 
-/* Hero Section */
+/* Hero */
 .hero {
     padding: 80px 0;
     text-align: left;
+    /* 移除hero背景色 */
 }
 
 .hero h1 {
@@ -82,28 +136,24 @@ nav {
     display: inline-flex;
     align-items: center;
     padding: 15px 30px;
-    background: transparent;
-    color: white;
     border: 2px solid white;
     border-radius: 30px;
-    text-decoration: none;
+    color: white;
+    background: transparent;
     font-weight: 600;
     margin-top: 30px;
+    text-decoration: none;
     transition: all 0.3s ease;
 }
 
 .cta-button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.15);
 }
 
-.cta-button svg {
-    margin-left: 10px;
-}
-
-/* How It Works Section */
+/* How It Works */
 .how-it-works {
     padding: 80px 0;
-    position: relative;
+    /* 移除背景色，讓主漸變背景透過 */
 }
 
 .how-it-works h2 {
@@ -114,39 +164,13 @@ nav {
 
 .step {
     display: flex;
-    margin-bottom: 80px;
-    position: relative;
-}
-
-.step-content {
-    max-width: 400px;
-}
-
-.step-number {
-    color: #9174cb;
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 15px;
-}
-
-.step h3 {
-    color: white;
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-}
-
-.step p {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 1rem;
-}
-
-.step {
-    display: flex;
     align-items: center;
     justify-content: center;
     gap: 40px;
     margin-bottom: 80px;
     position: relative;
+    /* 移除step的背景色，減少背景和圓角 */
+    padding: 20px;
 }
 
 .step:nth-child(even) {
@@ -163,10 +187,15 @@ nav {
     max-width: 500px;
 }
 
-.step-content p {
-    font-size: 16px;
-    line-height: 1.6;
+.step-content h3 {
+    font-size: 1.5rem;
     color: white;
+    margin-bottom: 15px;
+}
+
+.step-content p {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .step::after {
@@ -177,7 +206,7 @@ nav {
     transform: translateX(-50%);
     width: 2px;
     height: 40px;
-    background-image: linear-gradient(to bottom, transparent 0%, #8247c5 50%, transparent 100%);
+    background-image: linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
     background-size: 2px 10px;
     background-repeat: repeat-y;
 }
@@ -186,22 +215,10 @@ nav {
     display: none;
 }
 
-@media (max-width: 768px) {
-
-    .step,
-    .step:nth-child(even) {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .step-image img {
-        margin-bottom: 20px;
-    }
-}
-
-/* Features Section */
+/* Features - 保留特別外框樣式 */
 .features {
     padding: 80px 0;
+    /* 移除features背景色 */
 }
 
 .features h2 {
@@ -218,8 +235,8 @@ nav {
 }
 
 .feature-card {
-    background: rgba(48, 12, 227, 0.086);
-    border: 5px dashed rgba(255, 255, 255, 0.5);
+    background: transparent;
+    border: 3px dashed rgba(255, 255, 255, 0.4);
     border-radius: 15px;
     padding: 30px;
     text-align: center;
@@ -228,24 +245,19 @@ nav {
 
 .feature-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
 }
 
-.feature-card h3 {
-    color: white;
-    font-size: 1.2rem;
-    margin-bottom: 15px;
-}
-
+.feature-card h3,
 .feature-number {
-    font-size: 3rem;
     color: white;
-    margin-top: 20px;
 }
 
 /* Testimonials */
 .testimonials {
     padding: 80px 0;
+    /* 移除testimonials背景色 */
 }
 
 .testimonials h2 {
@@ -259,28 +271,22 @@ nav {
     margin-bottom: 50px;
 }
 
-.testimonial-slider {
-    position: relative;
-    overflow: hidden;
-}
-
 .testimonial-slide {
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent;
     border-radius: 15px;
     padding: 30px;
     margin: 0 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .testimonial-quote {
     font-size: 2rem;
     color: white;
-    margin-bottom: 20px;
 }
 
 .testimonial-text {
-    color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 20px;
     font-style: italic;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .testimonial-author {
@@ -291,14 +297,13 @@ nav {
 .author-avatar {
     width: 40px;
     height: 40px;
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.9);
     border-radius: 50%;
     margin-right: 15px;
 }
 
 .author-info h4 {
     color: white;
-    margin-bottom: 5px;
 }
 
 .author-info p {
@@ -306,31 +311,11 @@ nav {
     font-size: 0.9rem;
 }
 
-.slider-nav {
-    display: flex;
-    justify-content: space-between;
-    position: absolute;
-    width: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.slider-nav button {
-    background: white;
-    border: none;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-}
-
-/* FAQ Section */
+/* FAQ */
 .faq {
     padding: 80px 0;
     text-align: center;
+    /* 移除faq背景色 */
 }
 
 .faq h2 {
@@ -347,6 +332,10 @@ nav {
 .faq-item {
     margin-bottom: 30px;
     text-align: left;
+    background: transparent;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .faq-question {
@@ -358,9 +347,9 @@ nav {
 
 .faq-icon {
     margin-right: 15px;
-    background: rgba(255, 255, 255, 0.2);
     width: 24px;
     height: 24px;
+    background: rgba(255, 255, 255, 0.3);
     border-radius: 5px;
     display: flex;
     justify-content: center;
@@ -374,25 +363,27 @@ nav {
 
 /* Footer */
 footer {
-    background: rgba(0, 0, 0, 0.2);
+    background: transparent;
     padding: 40px 0;
     text-align: center;
     color: rgba(255, 255, 255, 0.7);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 適應手機屏幕 */
+/* RWD 調整 */
 @media (max-width: 768px) {
     .feature-grid {
         grid-template-columns: 1fr;
     }
 
-    .step {
+    .step,
+    .step:nth-child(even) {
         flex-direction: column;
+        text-align: center;
     }
 
-    .step-image {
-        position: static;
-        margin: 20px auto;
+    .step-image img {
+        margin-bottom: 20px;
     }
 
     .hero h1 {

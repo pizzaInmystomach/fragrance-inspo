@@ -6,7 +6,7 @@ import './landing.css';
 
 export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+
   // Testimonial data
   const testimonials = [
     {
@@ -28,13 +28,13 @@ export default function Landing() {
 
   // Testimonial navigation functions
   const prevSlide = () => {
-    setCurrentSlide((prev) => 
+    setCurrentSlide((prev) =>
       prev === 0 ? testimonials.length - 1 : prev - 1
     );
   };
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => 
+    setCurrentSlide((prev) =>
       prev === testimonials.length - 1 ? 0 : prev + 1
     );
   };
@@ -50,10 +50,10 @@ export default function Landing() {
             </div>
             <ul className="nav-links">
               <li><Link href="/">Home</Link></li>
-              <li><Link href="#service">Service</Link></li>
-              <li><Link href="#collection">Collection</Link></li>
+              <li><Link href="#howitworks">How it works</Link></li>
+              <li><Link href="#features">Features</Link></li>
               <li><Link href="#blog">Blog</Link></li>
-              <li><Link href="#about">About</Link></li>
+              <li><Link href="#FAQ">FAQ</Link></li>
             </ul>
           </nav>
         </div>
@@ -72,11 +72,11 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="how-it-works" id="service">
+      <section className="how-it-works" id="howitworks">
         <div className="container">
           <h2>How It Works</h2>
           <div className="dotted-line"></div>
-          
+
           <div className="step">
             <div className="step-image">
               <Image src="/work1.png" alt="Profile You" width={240} height={240} />
@@ -119,7 +119,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="features" id="collection">
+      <section className="features" id="features">
         <div className="container">
           <h2>Our feature</h2>
 
@@ -142,7 +142,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="testimonials">
+      <section className="testimonials" id="blog">
         <div className="container">
           <h2>User Feedback</h2>
           <p className="testimonials-subtitle">"What our customers are saying"</p>
@@ -176,7 +176,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="faq" id="blog">
+      <section className="faq" id="FAQ">
         <div className="container">
           <h2>FAQ</h2>
 
@@ -184,20 +184,20 @@ export default function Landing() {
             <div className="faq-item">
               <div className="faq-question">
                 <div className="faq-icon">?</div>
-                <h3>如何創建我的第一個香氣檔案？</h3>
+                <h3>How do I create my first scent profile?</h3>
               </div>
               <div className="faq-answer">
-                <p>只需點擊"開始探索"按鈕，填寫個性問卷，分享您的喜好和靈感來源，我們的系統將立即為您生成個性化香氣推薦。</p>
+                <p>Simply click the "Start Exploring" button, fill out the personal questionnaire, share your preferences and sources of inspiration, and our system will instantly generate a personalized scent recommendation for you.</p>
               </div>
             </div>
 
             <div className="faq-item">
               <div className="faq-question">
                 <div className="faq-icon">?</div>
-                <h3>我需要創建帳戶才能使用Fragrance Inspo嗎？</h3>
+                <h3>Do I need to create an account to use Fragrance Inspo?</h3>
               </div>
               <div className="faq-answer">
-                <p>基本推薦不需要帳戶，但創建帳戶可以保存您的香氣檔案，跟踪您喜愛的香水，並獲得更多個性化功能。</p>
+                <p>An account is not required for basic recommendations, but creating an account allows you to save your scent profile, keep track of your favorite fragrances, and gain access to more personalized features.</p>
               </div>
             </div>
           </div>
@@ -206,7 +206,7 @@ export default function Landing() {
 
       <footer id="about">
         <div className="container">
-          <p>&copy; {new Date().getFullYear()} Your Personality. Bottled | 所有權利保留</p>
+          <p>&copy; {new Date().getFullYear()} Your Personality. Bottled </p>
         </div>
       </footer>
     </div>
