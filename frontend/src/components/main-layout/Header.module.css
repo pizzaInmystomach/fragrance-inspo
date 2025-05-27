@@ -1,0 +1,53 @@
+/* Header */
+.header {
+    position: sticky;
+    top: 0;
+    padding: 35px 60px;
+    background: transparent !important;
+    /* backdrop filter */
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+}
+
+.logoCircle,
+.logoFilled {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
+
+.logoCircle {
+    border: 2px solid white;
+    margin-right: 5px;
+}
+
+.logoFilled {
+    background-color: white;
+}
+
+.navLinks {
+    display: flex;
+    list-style: none;
+}
+
+.navLinks li {
+    margin-left: 30px;
+}
+
+.navLinks a {
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+}
