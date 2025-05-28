@@ -1,4 +1,4 @@
-/* 通用設定 - 強制覆蓋所有背景 */
+/* 通用設定 - 強制覆蓋所有背景
 * {
     margin: 0;
     padding: 0;
@@ -7,7 +7,7 @@
 }
 
 /* 強制統一背景 */
-html,
+/* html,
 body,
 section,
 div,
@@ -21,10 +21,10 @@ footer,
 .testimonials,
 .faq {
     background: transparent !important;
-}
+} */
 
 /* 極端方案：強制所有元素透明 */
-* {
+/* {
     background-color: transparent !important;
     background-image: none !important;
 }
@@ -32,34 +32,27 @@ footer,
 html {
     background: linear-gradient(135deg, #e0d0f0 0%, #c8b6e2 100%) !important;
     min-height: 100% !important;
-}
+} */
 
 /* 重新設置需要背景或邊框的元素 */
-.feature-card,
-.testimonial-slide,
-.faq-item {
+.featureCard,
+.testimonialSlide,
+.faqItem {
     background: transparent !important;
 }
 
-.logo-filled {
+.logoFilled {
     background-color: white !important;
 }
 
-.author-avatar {
+.authorAvatar {
     background-color: rgba(255, 255, 255, 0.9) !important;
 }
 
-.faq-icon {
+.faqIcon {
     background: rgba(255, 255, 255, 0.3) !important;
 }
 
-body {
-    background: linear-gradient(135deg, #e0d0f0 0%, #c8b6e2 100%) !important;
-    color: #333;
-    line-height: 1.6;
-    overflow-x: hidden;
-    min-height: 100vh !important;
-}
 
 .container {
     max-width: 1200px;
@@ -67,72 +60,25 @@ body {
     padding: 0 20px;
 }
 
-/* Header */
-header {
-    padding: 20px 0;
-    background: transparent !important;
-    position: relative;
-    z-index: 100;
-}
-
-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-}
-
-.logo-circle,
-.logo-filled {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-}
-
-.logo-circle {
-    border: 2px solid white;
-    margin-right: 5px;
-}
-
-.logo-filled {
-    background-color: white;
-}
-
-.nav-links {
-    display: flex;
-    list-style: none;
-}
-
-.nav-links li {
-    margin-left: 30px;
-}
-
-.nav-links a {
-    text-decoration: none;
-    color: white;
-    font-weight: 600;
-}
-
 /* Hero */
 .hero {
     padding: 80px 0;
     text-align: left;
+    font-family: "Kanit", sans-serif;
+    font-weight: 700;
+    font-style: normal;
     /* 移除hero背景色 */
 }
 
 .hero h1 {
+    margin-bottom: 20px;
+    line-height: 1.2;
     font-size: 3.5rem;
     font-weight: 700;
     color: white;
-    margin-bottom: 20px;
-    line-height: 1.2;
 }
 
-.cta-button {
+.ctaButton {
     display: inline-flex;
     align-items: center;
     padding: 15px 30px;
@@ -146,17 +92,16 @@ nav {
     transition: all 0.3s ease;
 }
 
-.cta-button:hover {
+.ctaButton:hover {
     background: rgba(255, 255, 255, 0.15);
 }
 
 /* How It Works */
-.how-it-works {
+.howItWorks {
     padding: 80px 0;
     /* 移除背景色，讓主漸變背景透過 */
 }
-
-.how-it-works h2 {
+.howItWorks h2 {
     font-size: 2.5rem;
     color: white;
     margin-bottom: 50px;
@@ -177,23 +122,23 @@ nav {
     flex-direction: row-reverse;
 }
 
-.step-image img {
+.stepImage img {
     width: 240px;
     height: auto;
     object-fit: contain;
 }
 
-.step-content {
+.stepContent {
     max-width: 500px;
 }
 
-.step-content h3 {
+.stepContent h3 {
     font-size: 1.5rem;
     color: white;
     margin-bottom: 15px;
 }
 
-.step-content p {
+.stepContent p {
     font-size: 1rem;
     color: rgba(255, 255, 255, 0.8);
 }
@@ -228,13 +173,13 @@ nav {
     text-align: right;
 }
 
-.feature-grid {
+.featureGrid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 30px;
 }
 
-.feature-card {
+.featureCard {
     background: transparent;
     border: 3px dashed rgba(255, 255, 255, 0.4);
     border-radius: 15px;
@@ -243,14 +188,14 @@ nav {
     transition: all 0.3s ease;
 }
 
-.feature-card:hover {
+.featureCard:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.08);
 }
 
-.feature-card h3,
-.feature-number {
+.featureCard h3,
+.featureNumber {
     color: white;
 }
 
@@ -266,12 +211,12 @@ nav {
     margin-bottom: 20px;
 }
 
-.testimonials-subtitle {
+.testimonialsSubtitle {
     color: rgba(255, 255, 255, 0.8);
     margin-bottom: 50px;
 }
 
-.testimonial-slide {
+.testimonialSlide {
     background: transparent;
     border-radius: 15px;
     padding: 30px;
@@ -279,22 +224,22 @@ nav {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.testimonial-quote {
+.testimonialQuote {
     font-size: 2rem;
     color: white;
 }
 
-.testimonial-text {
+.testimonialText {
     font-style: italic;
     color: rgba(255, 255, 255, 0.8);
 }
 
-.testimonial-author {
+.testimonialAuthor {
     display: flex;
     align-items: center;
 }
 
-.author-avatar {
+.authorAvatar {
     width: 40px;
     height: 40px;
     background-color: rgba(255, 255, 255, 0.9);
@@ -302,11 +247,11 @@ nav {
     margin-right: 15px;
 }
 
-.author-info h4 {
+.authorInfo h4 {
     color: white;
 }
 
-.author-info p {
+.authorInfo p {
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.9rem;
 }
@@ -324,12 +269,12 @@ nav {
     margin-bottom: 50px;
 }
 
-.faq-list {
+.faqList {
     max-width: 800px;
     margin: 0 auto;
 }
 
-.faq-item {
+.faqItem {
     margin-bottom: 30px;
     text-align: left;
     background: transparent;
@@ -338,14 +283,14 @@ nav {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.faq-question {
+.faqQuestion {
     display: flex;
     align-items: center;
     color: white;
     margin-bottom: 10px;
 }
 
-.faq-icon {
+.faqIcon {
     margin-right: 15px;
     width: 24px;
     height: 24px;
@@ -356,23 +301,14 @@ nav {
     align-items: center;
 }
 
-.faq-answer {
+.faqAnswer {
     color: rgba(255, 255, 255, 0.7);
     padding-left: 39px;
 }
 
-/* Footer */
-footer {
-    background: transparent;
-    padding: 40px 0;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.7);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 /* RWD 調整 */
 @media (max-width: 768px) {
-    .feature-grid {
+    .featureGrid {
         grid-template-columns: 1fr;
     }
 
@@ -382,7 +318,7 @@ footer {
         text-align: center;
     }
 
-    .step-image img {
+    .stepImage img {
         margin-bottom: 20px;
     }
 
