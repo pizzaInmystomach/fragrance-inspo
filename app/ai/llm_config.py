@@ -1,8 +1,8 @@
-from langchain.llms import Ollama
-from langchain.chat_models import ChatOllama
+from langchain_community.llms import Ollama
+from langchain_community.chat_models import ChatOllama
 
 # 簡單的 Ollama 模型設定
-def get_llm(model_name="llama2", temperature=0.7):
+def get_llm(model_name="llama3", temperature=0.7):
     """獲取 Ollama 模型實例"""
     try:
         return ChatOllama(
