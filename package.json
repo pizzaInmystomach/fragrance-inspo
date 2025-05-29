@@ -16,5 +16,10 @@
   "bugs": {
     "url": "https://github.com/ying0607/fragrance-inspo/issues"
   },
-  "homepage": "https://github.com/ying0607/fragrance-inspo#readme"
+  "homepage": "https://github.com/ying0607/fragrance-inspo#readme",
+  "devDependencies": {
+    "@types/node": "^22.15.24",
+    "@types/react": "^19.1.6",
+    "typescript": "^5.8.3"
+  }
 }
