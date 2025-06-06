@@ -6,12 +6,12 @@ import BouncingBlobs from '@/components/main-layout/Blobs';
 export default function MainLayout({ children }) {
   return (
     <main className={styles.main}>
-        <Header />
+      <BouncingBlobs />
+      <Header />
+      <div className={styles.content}>
         {children}
-        <Footer />
-        {children}
-        <BouncingBlobs />
-    
+      </div>
+      <Footer />
     </main>
   );
 }

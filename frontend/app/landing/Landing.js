@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './Landing.module.css';
@@ -9,7 +9,7 @@ import MainLayout from '../MainLayout';
 export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Testimonial data
+  // === Testimonials 資料 ===
   const testimonials = [
     {
       text: "Incredibly accurate! The fragrance the system recommended feels genuinely 'me'.",
@@ -28,7 +28,7 @@ export default function Landing() {
     }
   ];
 
-  // Testimonial navigation functions
+  // === Testimonials 導覽功能 ===
   const prevSlide = () => {
     setCurrentSlide((prev) =>
       prev === 0 ? testimonials.length - 1 : prev - 1
@@ -43,89 +43,90 @@ export default function Landing() {
 
   return (
     <MainLayout>
+      {/* === Hero 區塊 === */}
       <section className={styles.hero}>
         <div className={styles.container}>
           <h1>Your Personality.<br />Bottled</h1>
-          <p style={{ color: 'white', maxWidth: '500px' }}>From mood to muse, discover your scented self</p>
+          <p style={{ color: 'white', maxWidth: '500px' }}>
+            From mood to muse, discover your scented self
+          </p>
           <Link href="/chat" className={styles.ctaButton}>
             Start Exploring
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M5 12H19M19 12L12 5M19 12L12 19"
+                stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
         </div>
       </section>
 
+      {/* === How It Works 區塊 === */}
       <section className={styles.howItWorks} id="howitworks">
         <div className={styles.container}>
           <h2>How It Works</h2>
           <div className={styles.dottedLine}></div>
 
+          {/* Step 1 */}
           <div className={styles.step}>
             <div className={styles.stepImage}>
-              <Image src="/work1.png" alt="Profile You" width={240} height={240} />
+              <Image src="https://yourcdn.com/images/work1.png" alt="Profile You" width={240} height={240} unoptimized />
             </div>
             <div className={styles.stepContent}>
-              <div className={styles.stepNumber}>#1 Profile You</div>
-              <p>Share your personality traits, MBTI type, and zodiac sign to help our system understand your unique essence and fragrance preferences.</p>
+              <div className={styles.stepNumber}>#Step 1 Find Your Inspiration</div>
+              <p>Enter the name of a celebrity or character you're interested in..</p>
             </div>
           </div>
 
+          {/* Step 2 */}
           <div className={styles.step}>
             <div className={styles.stepImage}>
-              <Image src="/work2.png" alt="Share Inspirations" width={240} height={240} />
+              <Image src="https://yourcdn.com/images/work2.png" alt="Share Inspirations" width={240} height={240} unoptimized />
             </div>
             <div className={styles.stepContent}>
-              <div className={styles.stepNumber}>#2 Share Inspirations</div>
-              <p>Tell us which celebrities, characters, or icons inspire you, giving us insight into your style and aesthetic preferences.</p>
+              <div className={styles.stepNumber}># Step 2 Discover Matching Scents</div>
+              <p>The system will recommend a selection of perfumes that reflect their personality.</p>
             </div>
           </div>
 
+          {/* Step 3 */}
           <div className={styles.step}>
             <div className={styles.stepImage}>
-              <Image src="/work3.png" alt="Smart Match" width={240} height={240} />
+              <Image src="https://yourcdn.com/images/work3.png" alt="Smart Match" width={240} height={240} unoptimized />
             </div>
             <div className={styles.stepContent}>
-              <div className={styles.stepNumber}>#3 Smart Match</div>
-              <p>Our algorithm analyzes your inputs to identify fragrance families and notes that perfectly complement your personality profile.</p>
+              <div className={styles.stepNumber}># Step 3 Save Your Favorites</div>
+              <p>Add your preferred scents to your personal library for future reference.</p>
             </div>
           </div>
 
-          <div className={styles.step}>
-            <div className={styles.stepImage}>
-              <Image src="/work4.png" alt="Custom Scent" width={240} height={240} />
-            </div>
-            <div className={styles.stepContent}>
-              <div className={styles.stepNumber}>#4 Custom Scent</div>
-              <p>Receive personalized fragrance recommendations or create your own bespoke scent formula tailored to your unique profile.</p>
-            </div>
-          </div>
         </div>
       </section>
 
+      {/* === Feature 區塊 === */}
       <section className={styles.features} id="features">
         <div className={styles.container}>
           <h2>Our feature</h2>
 
           <div className={styles.featureGrid}>
             <div className={styles.featureCard}>
-              <h3>Personality Match System</h3>
+              <h3>Celebrity scent recommendation</h3>
               <div className={styles.featureNumber}>01</div>
             </div>
 
             <div className={styles.featureCard}>
-              <h3>Celebrity Scent Library</h3>
+              <h3>character scent recommendation</h3>
               <div className={styles.featureNumber}>02</div>
             </div>
 
             <div className={styles.featureCard}>
-              <h3>Bespoke Fragrance Lab</h3>
+              <h3>Scent Library</h3>
               <div className={styles.featureNumber}>03</div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* === Testimonials 區塊 === */}
       <section className={styles.testimonials} id="blog">
         <div className={styles.container}>
           <h2>User Feedback</h2>
@@ -146,12 +147,12 @@ export default function Landing() {
 
             <div className={styles.sliderNav}>
               <button className={styles.prev} onClick={prevSlide}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M15 18L9 12L15 6" stroke="#9174cb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
               <button className={styles.next} onClick={nextSlide}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M9 18L15 12L9 6" stroke="#9174cb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
@@ -160,11 +161,13 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* === FAQ 區塊 === */}
       <section className={styles.faq} id="FAQ">
         <div className={styles.container}>
           <h2>FAQ</h2>
 
           <div className={styles.faqList}>
+            {/* FAQ 1 */}
             <div className={styles.faqItem}>
               <div className={styles.faqQuestion}>
                 <div className={styles.faqIcon}>?</div>
@@ -175,6 +178,7 @@ export default function Landing() {
               </div>
             </div>
 
+            {/* FAQ 2 */}
             <div className={styles.faqItem}>
               <div className={styles.faqQuestion}>
                 <div className={styles.faqIcon}>?</div>
