@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 
 // Environment variable for AI service endpoint - potential issue: no validation
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL;
+if (!AI_SERVICE_URL) throw new Error('AI_SERVICE_URL not set'); 
 
 /**
  * Sends chat messages to the Python AI service and gets recommendations

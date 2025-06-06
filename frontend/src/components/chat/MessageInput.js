@@ -20,6 +20,7 @@ import styles from './MessageInput.module.css';
  */
 export default function MessageInput({ 
     onSend,                    // ISSUE: Accepted but never used
+    onSelect, 
     className,                 // ISSUE: Accepted but never used
     customInputPlaceholder = 'You can also enter other preferences or questions...'
 }) {
