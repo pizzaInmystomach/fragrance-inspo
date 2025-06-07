@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import styles from './Landing.module.css'
 import MainLayout from '../MainLayout'
-import GoogleLoginButton from 'src/components/GoogleLoginButton.js'
+import GoogleLoginButton from '@/components/GoogleLoginButton.js'
 
 export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0)
