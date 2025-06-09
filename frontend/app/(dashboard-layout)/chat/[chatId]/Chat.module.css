@@ -1,0 +1,26 @@
+.chatContent {
+    width: 90%;
+}
+.messageBubbleContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+} 
+.messageBubble {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+} 
+.botBubble {
+    background-color: #ffffff;
+    align-self: flex-start;
+}
+.userBubble {
+    background-color: #d5aeea;
+    color: white;
+    align-self: flex-end;
+}

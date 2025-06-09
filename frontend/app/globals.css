@@ -8,6 +8,9 @@
   --foreground: oklch(0.141 0.005 285.823);
 
   --primary: #c8b6e2;
+  --primary-hover: #a87fde;
+  --primary-dark: #7f6b9a;
+  --primary-darker: #6c5689;
   --primary-font-color: #6c5689;
 
   --clr-bg: #f8f8f7;

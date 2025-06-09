@@ -42,16 +42,12 @@ export default function Chat() {
     return (
         <div className={styles.chatContent}>
             <div className={styles.chatNotFound}>
-                <h1>Start A New Chat</h1>
-                <p>To start a new chat, click the button below.</p>
+                <h1>Chat Not Found</h1>
+                <p>Sorry, the chat you requested could not be found.</p>
             </div>
             <div className={styles.startNewChat} onClick={() => handleStartNewChat()}>
-                New Chat
+                Start A New Chat
             </div>
         </div>
     );
   }
-
-
-
-  

@@ -26,6 +26,10 @@ const UserSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Collection',
     },
+    Chat: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Chat',
+    },
     IsBlocked: {
         type: Boolean,
         default: false,
