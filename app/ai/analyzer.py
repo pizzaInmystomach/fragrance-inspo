@@ -1,14 +1,15 @@
 import json
-from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from .llm_config import CHARACTER_MODEL
+from .llm_config import get_balanced_model
 from .prompts import CHARACTER_PROMPT, MATCHING_PROMPT, DESCRIPTION_PROMPT, TRAIT_ENHANCEMENT_PROMPT
 
 class CharacterAnalyzer:
     """Character analyzer and fragrance matcher"""
     
     def __init__(self):
-        self.llm = CHARACTER_MODEL
+        self.llm = get_balanced_model()  # 使用平衡模型作為預設
+        
+        # 建立提示詞模板
         self.character_prompt = PromptTemplate(
             template=CHARACTER_PROMPT,
             input_variables=["character_name", "source_type"]
@@ -27,23 +28,27 @@ class CharacterAnalyzer:
             input_variables=["fragrance_name", "brand", "existing_accords", "notes_info"]
         )
         
-        # Build chains
-        self.character_chain = LLMChain(llm=self.llm, prompt=self.character_prompt)
-        self.matching_chain = LLMChain(llm=self.llm, prompt=self.matching_prompt)
-        self.description_chain = LLMChain(llm=self.llm, prompt=self.description_prompt)
-        self.trait_enhancement_chain = LLMChain(llm=self.llm, prompt=self.trait_enhancement_prompt)
+        # 使用新的 LCEL 語法建立鏈
+        self.character_chain = self.character_prompt | self.llm
+        self.description_chain = self.description_prompt | self.llm
+        self.trait_enhancement_chain = self.trait_enhancement_prompt | self.llm
+        # 注意：matching_chain 會在 match_fragrances 方法中動態建立
     
     def analyze_character(self, character_name, source_type=""):
         """Analyze character traits (同步版本)"""
         try:
-            result = self.character_chain.run(
-                character_name=character_name,
-                source_type=source_type
-            )
+            # 使用新的 invoke 方法
+            result = self.character_chain.invoke({
+                "character_name": character_name,
+                "source_type": source_type
+            })
+            
+            # 處理回應內容
+            content = result.content if hasattr(result, 'content') else str(result)
             
             # Try to parse JSON
             try:
-                return json.loads(result)
+                return json.loads(content)
             except:
                 # If parsing fails, provide basic results
                 return {
@@ -60,9 +65,9 @@ class CharacterAnalyzer:
             }
     
     def enhance_fragrance_data(self, fragrance):
-        """使用LLM增强香水数据，补充缺失的traits等信息"""
+        """使用LLM增強香水資料，補充缺失的traits等資訊"""
         try:
-            # 准备现有信息
+            # 準備現有資訊
             name = fragrance.get('Name', '').replace(',', '').strip()
             brand = fragrance.get('Brand', '').replace(',', '').strip()
             existing_accords = fragrance.get('Accords', '').replace(',', ', ').strip()
@@ -158,7 +163,7 @@ class CharacterAnalyzer:
             
             # Try to parse result
             try:
-                match_result = json.loads(result)
+                match_result = json.loads(content)
                 fragrance_id = match_result.get("fragrance_id")
                 rationale = match_result.get("rationale", "This fragrance's traits match the character's style.")
                 
@@ -189,16 +194,19 @@ class CharacterAnalyzer:
     def generate_description(self, fragrance):
         """Generate fragrance description (同步版本)"""
         try:
-            description = self.description_chain.run(
-                fragrance_name=fragrance["Name"],
-                brand=fragrance["Brand"],
-                top_notes=", ".join(fragrance.get("top_notes", [])),
-                heart_notes=", ".join(fragrance.get("heart_notes", [])),
-                base_notes=", ".join(fragrance.get("base_notes", [])),
-                accords=", ".join(fragrance.get("Accords", []))
-            )
+            result = self.description_chain.invoke({
+                "fragrance_name": fragrance["Name"],
+                "brand": fragrance["Brand"],
+                "top_notes": ", ".join(fragrance.get("top_notes", [])),
+                "heart_notes": ", ".join(fragrance.get("heart_notes", [])),
+                "base_notes": ", ".join(fragrance.get("base_notes", [])),
+                "accords": ", ".join(fragrance.get("Accords", []))
+            })
             
-            return description.strip()
+            # 處理回應內容
+            content = result.content if hasattr(result, 'content') else str(result)
+            return content.strip()
+            
         except Exception as e:
             print(f"Description generation error: {str(e)}")
             return f"{fragrance['Name']} by {fragrance.get('Brand', 'Unknown Brand')} is a captivating fragrance that embodies elegance and sophistication. This unique scent offers a harmonious blend of carefully selected notes that create an unforgettable olfactory experience."
