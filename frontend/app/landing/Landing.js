@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import styles from './Landing.module.css'
-import MainLayout from '../MainLayout'
 import GoogleLoginButton from '@/components/GoogleLoginButton.js'
 
 export default function Landing() {
@@ -37,7 +36,7 @@ export default function Landing() {
   }
 
   return (
-    <MainLayout>
+    <>
       {/* === Hero 區塊 === */}
       <section className={styles.hero}>
         <div className={styles.container}>
@@ -173,6 +172,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-    </MainLayout>
+    </>
   )
 }
