@@ -1,20 +1,29 @@
 // app/api/chat/route.js
 
+console.log('AI_SERVICE_URL=>', process.env.AI_SERVICE_URL);
+console.log('AI_SERVICE_API_KEY=>', process.env.AI_SERVICE_API_KEY);
+
 import { NextResponse } from 'next/server';
 import { aiChatCompletion } from '@/lib/ai-service';
 import { getFragrancesByAttributes } from '@/lib/fragrance-service';
 
-export async function POST(request) {
+export async function POST(req) {
     try {
-        const data = await request.json();
-        const { messages, userId } = data;
-        
-        if (!messages || !Array.isArray(messages)) {
-        return NextResponse.json(
-            { error: 'Invalid message format' },
-            { status: 400 }
-        );
+        const {name} = await req.json();
+        console.log('name:', name);
+
+        if (!name || typeof name !== 'string') {
+          return NextResponse.json(
+            { error: 'Name is required' },
+            { status: 400}
+          );
         }
+
+        // build chat history from single name input
+        const messages = [
+          { role: 'user', content: name.trim() },
+        ];
+
 
         // ① 把歷史 messages 送進 ai-service.js → Python AI
         const aiResponse = await aiChatCompletion(messages);
