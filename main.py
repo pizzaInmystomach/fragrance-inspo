@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="香氛靈感 API", 
     description="基於角色分析的香水推薦API",
-    version="1.0.0"
+    version="2.0.0"
 )
 
 # 設定CORS
@@ -37,6 +37,19 @@ data_handler = None
 class RecommendationRequest(BaseModel):
     character_name: str
     source_type: Optional[str] = ""
+
+# 新增：智能輸入解析請求模型
+class SmartInputRequest(BaseModel):
+    user_input: str
+    num_recommendations: Optional[int] = 3
+
+# 新增：輸入解析回應模型
+class InputParsingResponse(BaseModel):
+    status: str  # success, need_clarification, invalid
+    character_name: Optional[str] = None
+    source: Optional[str] = None
+    intent: str
+    message: str
 
 class HealthResponse(BaseModel):
     status: str
@@ -91,7 +104,7 @@ async def shutdown_event():
 def read_root():
     """根路徑"""
     return JSONResponse(
-        content={"message": "歡迎使用香氛靈感 API"}, 
+        content={"message": "歡迎使用香氛靈感 API v2.0 - 現已支援智能輸入解析！"}, 
         media_type="application/json; charset=utf-8"
     )
 
@@ -124,9 +137,186 @@ def health_check():
             total_fragrances=0
         )
 
+# 新增：智能輸入解析端點
+@app.post("/api/parse-input", response_model=InputParsingResponse)
+def parse_user_input(request: SmartInputRequest):
+    """
+    解析用戶的自然語言輸入
+    支持各種表達方式：
+    - "I want to smell like Harry Potter"
+    - "Hermione Granger"
+    - "What fragrance would Daisy wear?"
+    """
+    try:
+        # 檢查服務是否已初始化
+        if not analyzer:
+            raise HTTPException(
+                status_code=503, 
+                detail="服務尚未初始化完成，請稍後再試"
+            )
+        
+        logger.info(f"解析用戶輸入: {request.user_input}")
+        
+        result = analyzer.parse_user_input(request.user_input.strip())
+        
+        if not result:
+            return InputParsingResponse(
+                status="invalid",
+                character_name=None,
+                source=None,
+                intent="Parse failed",
+                message="I couldn't understand your request. Please tell me which character you'd like to match!"
+            )
+        
+        return InputParsingResponse(
+            status=result.get("status", "invalid"),
+            character_name=result.get("character_name"),
+            source=result.get("source"),
+            intent=result.get("intent", ""),
+            message=result.get("message", "")
+        )
+        
+    except Exception as e:
+        logger.error(f"輸入解析錯誤: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Input parsing failed: {str(e)}")
+
+# 新增：智能香水推薦端點（完整流程）
+@app.post("/api/recommend-smart")
+def get_smart_recommendations(request: SmartInputRequest):
+    """
+    智能香水推薦 - 從自然語言輸入開始到完整推薦
+    這是主要的端點，支持用戶直接輸入自然語言
+    """
+    try:
+        # 檢查服務是否已初始化
+        if not analyzer or not data_handler:
+            raise HTTPException(
+                status_code=503, 
+                detail="服務尚未初始化完成，請稍後再試"
+            )
+        
+        logger.info(f"開始智能推薦流程，用戶輸入: {request.user_input}")
+        
+        # 第1步：解析用戶輸入
+        parse_result = analyzer.parse_user_input(request.user_input.strip())
+        
+        if not parse_result:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "character_name": None,
+                    "character_analysis": None,
+                    "recommendations": [],
+                    "message": "I couldn't understand your request. Please tell me which character you'd like to match!",
+                    "error": "Input parsing failed"
+                },
+                media_type="application/json; charset=utf-8"
+            )
+        
+        # 如果需要澄清或輸入無效，返回相應訊息
+        if parse_result.get("status") != "success":
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "character_name": parse_result.get("character_name"),
+                    "character_analysis": None,
+                    "recommendations": [],
+                    "message": parse_result.get("message", "Please provide more information."),
+                    "error": None
+                },
+                media_type="application/json; charset=utf-8"
+            )
+        
+        character_name = parse_result.get("character_name")
+        source = parse_result.get("source", "")
+        
+        logger.info(f"成功識別角色: {character_name} (來源: {source})")
+        
+        # 第2步：分析角色
+        character_analysis = analyzer.analyze_character(character_name, source)
+        
+        # 第3步：獲取香水資料
+        fragrances = data_handler.get_all_fragrances(limit=20)  # 限制數量以提高速度
+        
+        if not fragrances:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "character_name": character_name,
+                    "character_analysis": character_analysis,
+                    "recommendations": [],
+                    "message": "No fragrances found in database.",
+                    "error": "Empty database"
+                },
+                media_type="application/json; charset=utf-8"
+            )
+        
+        logger.info(f"獲取到 {len(fragrances)} 個香水進行匹配")
+        
+        # 第4步：匹配香水
+        match_result = analyzer.match_fragrances(
+            character_analysis, 
+            fragrances, 
+            request.num_recommendations
+        )
+        
+        recommendations = []
+        if match_result and match_result.get("recommendations"):
+            for rec in match_result["recommendations"]:
+                fragrance = rec["fragrance"]
+                description = analyzer.generate_description(fragrance)
+                
+                recommendations.append({
+                    "rank": rec["rank"],
+                    "fragrance": {
+                        "id": fragrance.get("id"),
+                        "name": fragrance.get("Name"),
+                        "brand": fragrance.get("Brand"),
+                        "accords": fragrance.get("Accords", []),
+                        "top_notes": fragrance.get("top_notes", []),
+                        "heart_notes": fragrance.get("heart_notes", []),
+                        "base_notes": fragrance.get("base_notes", []),
+                        "additional_traits": fragrance.get("additional_traits", []),
+                        "personality_match": fragrance.get("personality_match", []),
+                        "mood_description": fragrance.get("mood_description", ""),
+                        "season_suitability": fragrance.get("season_suitability", []),
+                        "time_of_day": fragrance.get("time_of_day", [])
+                    },
+                    "rationale": rec["rationale"],
+                    "description": description,
+                    "match_score": rec.get("match_score", 0)
+                })
+        
+        success_message = f"Found {len(recommendations)} perfect fragrance matches for {character_name}!"
+        
+        result = {
+            "success": True,
+            "character_name": character_name,
+            "character_analysis": character_analysis,
+            "recommendations": recommendations,
+            "message": success_message,
+            "error": None
+        }
+        
+        return JSONResponse(content=result, media_type="application/json; charset=utf-8")
+        
+    except Exception as e:
+        logger.error(f"智能推薦錯誤: {str(e)}")
+        return JSONResponse(
+            content={
+                "success": False,
+                "character_name": None,
+                "character_analysis": None,
+                "recommendations": [],
+                "message": "An error occurred while processing your request.",
+                "error": str(e)
+            },
+            media_type="application/json; charset=utf-8"
+        )
+
 @app.post("/api/recommendations")
 def get_recommendations(request: RecommendationRequest):
-    """獲取角色香水推薦"""
+    """獲取角色香水推薦（傳統方式）"""
     try:
         # 檢查服務是否已初始化
         if not analyzer or not data_handler:
@@ -215,6 +405,27 @@ def get_recommendations(request: RecommendationRequest):
     except Exception as e:
         logger.error(f"處理推薦請求時出錯: {str(e)}")
         raise HTTPException(status_code=500, detail=f"處理推薦請求時出錯: {str(e)}")
+
+# 新增：獲取熱門角色列表
+@app.get("/api/characters/popular")
+def get_popular_characters():
+    """獲取熱門角色列表，幫助用戶選擇"""
+    popular_characters = [
+        {"name": "Harry Potter", "source": "Harry Potter", "description": "Brave, loyal, determined wizard"},
+        {"name": "Hermione Granger", "source": "Harry Potter", "description": "Intelligent, studious, resourceful witch"},
+        {"name": "Daisy Buchanan", "source": "The Great Gatsby", "description": "Elegant, sophisticated, mysterious socialite"},
+        {"name": "James Bond", "source": "James Bond", "description": "Sophisticated, confident, suave secret agent"},
+        {"name": "Audrey Hepburn", "source": "Classic Hollywood", "description": "Elegant, graceful, timeless icon"},
+        {"name": "Jay Gatsby", "source": "The Great Gatsby", "description": "Romantic, ambitious, mysterious millionaire"},
+    ]
+    
+    return JSONResponse(
+        content={
+            "popular_characters": popular_characters,
+            "message": "You can ask for recommendations like: 'I want to smell like Harry Potter' or just 'Hermione Granger'"
+        },
+        media_type="application/json; charset=utf-8"
+    )
 
 @app.get("/api/fragrances")
 def get_all_fragrances(limit: Optional[int] = None):

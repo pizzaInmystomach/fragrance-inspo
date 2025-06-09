@@ -1,96 +1,129 @@
-# Character analysis prompt
+INPUT_PARSING_PROMPT = """
+You are a JSON API. You MUST respond with ONLY valid JSON, no explanations, no code, no markdown.
+
+Task: Extract character information from user input for fragrance recommendation.
+
+User input: "{user_input}"
+
+Return ONLY the JSON object below, nothing else:
+
+{{
+  "status": "success" or "need_clarification" or "invalid",
+  "character_name": "extracted character name" or null,
+  "source": "detected source/franchise" or null,
+  "intent": "description of what user wants",
+  "message": "response message to user"
+}}
+
+Rules:
+1. If user mentions wanting to smell like a character, extract the character name
+2. If user mentions a specific character, extract it even without "smell like"
+3. If input is greeting/casual chat, set status to "invalid" and ask for character info
+4. If character is unclear, set status to "need_clarification" and ask for more details
+5. If character is clear, set status to "success"
+
+Examples:
+- "I want to smell like Harry Potter" → success, character_name: "Harry Potter"
+- "Hermione Granger" → success, character_name: "Hermione Granger"  
+- "What fragrance would Daisy Buchanan wear" → success, character_name: "Daisy Buchanan"
+- "Hello" → invalid, ask for character information
+- "Someone brave" → need_clarification, ask for specific character name
+"""
+
+# Character analysis prompt - 改進版
 CHARACTER_PROMPT = """
-Please analyze the following character or celebrity's personality traits, style characteristics, and overall vibe:
-Character/Celebrity name: {character_name}
-Character source: {source_type}
+You are a character analysis expert. Analyze the following character's personality and style.
 
-Please provide:
-1. 5-7 key personality traits
-2. 3-5 style characteristics
-3. A brief character analysis description (50-100 words)
+Character/Celebrity: {character_name}
+Source: {source_type}
 
-Format as JSON:
+Provide a detailed analysis focusing on:
+1. Key personality traits (5-7 traits)
+2. Style characteristics (3-5 characteristics)  
+3. Brief character analysis (50-100 words)
+
+IMPORTANT: Respond ONLY the valid JSON in this exact format:
+
 {{
   "traits": ["trait1", "trait2", "trait3", "trait4", "trait5"],
   "style": ["style1", "style2", "style3"],
-  "analysis": "Character analysis description..."
+  "analysis": "Character analysis description here..."
 }}
+
+Do not include any text before or after the JSON. Only return the JSON object.
 """
 
-# Fragrance matching prompt
+# Fragrance matching prompt - 改進版
 MATCHING_PROMPT = """
-Based on the following character analysis, select the top {num_recommendations} most matching fragrances from the provided list.
+You are a fragrance matching expert. Based on the character analysis, select the top {num_recommendations} most suitable fragrances.
 
-Character analysis: {character_analysis}
+Character Analysis: {character_analysis}
 
-Fragrance list:
+Available Fragrances:
 {fragrances_data}
 
-Please choose the {num_recommendations} fragrance IDs that best suit this character, ranked from most suitable to least suitable.
-Consider the character's personality traits, style, and overall vibe when making your selections.
-Provide different reasons for each recommendation to show variety.
+Select the {num_recommendations} best matching fragrances and provide unique, personalized reasons for each recommendation.
 
-Format as JSON:
+IMPORTANT: Respond ONLY with valid JSON in this exact format:
+
 {{
   "recommendations": [
     {{
-      "fragrance_id": "first choice fragrance ID",
-      "rationale": "Why this fragrance is the best match (2-3 sentences)"
+      "fragrance_id": "actual_fragrance_id_from_list",
+      "rationale": "Specific reason why this fragrance matches the character's personality and style (2-3 sentences)"
     }},
     {{
-      "fragrance_id": "second choice fragrance ID", 
-      "rationale": "Why this fragrance is the second best match (2-3 sentences)"
+      "fragrance_id": "actual_fragrance_id_from_list",
+      "rationale": "Different reason focusing on other aspects of the character (2-3 sentences)"
     }},
     {{
-      "fragrance_id": "third choice fragrance ID",
-      "rationale": "Why this fragrance is the third best match (2-3 sentences)"
+      "fragrance_id": "actual_fragrance_id_from_list", 
+      "rationale": "Third unique reason highlighting different matching elements (2-3 sentences)"
     }}
   ]
 }}
+
+Do not include any text before or after the JSON. Only return the JSON object.
 """
 
-# Fragrance description prompt
+# Fragrance description prompt - 保持不變
 DESCRIPTION_PROMPT = """
-Please create a vivid description of the following fragrance's scent experience:
+Create a vivid, engaging description of this fragrance's scent experience:
    
-Fragrance name: {fragrance_name}
-Brand: {brand}
+Fragrance: {fragrance_name} by {brand}
 Top notes: {top_notes}
 Heart/Middle notes: {heart_notes}
 Base notes: {base_notes}
 Main accords: {accords}
    
-Provide a 100-150 word vivid description that captures:
+Write a 100-150 word poetic description that captures:
 1. The opening impression (top notes)
 2. The heart development (middle notes)  
 3. The lasting base (base notes)
-4. The overall mood and feeling of the fragrance
+4. The overall mood and feeling
 
-Write in an engaging, poetic style that helps readers imagine the scent experience.
+Use engaging, sensory language that helps readers imagine the scent experience.
 """
 
-# New prompt for enhancing fragrance data with LLM
+# Trait enhancement prompt - 改進版
 TRAIT_ENHANCEMENT_PROMPT = """
-Based on the fragrance information provided, please analyze and provide additional characteristics that would help match this fragrance to different personality types.
+You are a fragrance personality expert. Analyze this fragrance and provide personality insights.
 
-Fragrance name: {fragrance_name}
-Brand: {brand}
+Fragrance: {fragrance_name} by {brand}
 Existing accords: {existing_accords}
-Notes information: {notes_info}
+Notes: {notes_info}
 
-Please provide:
-1. 3-5 additional personality traits this fragrance would appeal to
-2. 3-5 personality types that would match this fragrance
-3. A brief mood/feeling description (1-2 sentences)
-4. Suitable seasons (spring, summer, autumn, winter)
-5. Best time of day (morning, afternoon, evening, night)
+Provide personality and style insights for this fragrance.
 
-Format as JSON:
+IMPORTANT: Respond ONLY with valid JSON in this exact format:
+
 {{
   "additional_traits": ["trait1", "trait2", "trait3"],
   "personality_match": ["personality1", "personality2", "personality3"],
-  "mood_description": "Brief description of the mood and feeling this fragrance evokes",
+  "mood_description": "Brief description of the mood this fragrance evokes",
   "season_suitability": ["season1", "season2"],
   "time_of_day": ["time1", "time2"]
 }}
+
+Do not include any text before or after the JSON. Only return the JSON object.
 """
