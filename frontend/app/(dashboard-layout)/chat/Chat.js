@@ -1,46 +1,16 @@
-// Fragrance Inspo - Chat
-
-// Chat with your fragrance AI assistant
-// Features:
-// - Select personality type
-// - Select fragrance notes
-// - Receive fragrance recommendations
-// - Chat Messages History
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatSelector from '@/components/chat/ChatSelector';
 import FragranceRecommendation from '@/components/chat/FragranceRecommendation';
 import styles from './Chat.module.css';
+import MessageInput from '@/components/chat/MessageInput';
 
 const STEP = {
-    PERSONALITY: 'personality',
-    NOTE: 'note',
+    NAME: 'name', 
     DONE: 'done',
 };
-
-const SAMPLE_PERSONALITY_OPTIONS = [
-{
-    id: 'introvert',
-    icon: '🧘',
-    label: 'Introverted',
-    description: 'Likes to be alone, enjoys quiet time'
-},
-{
-    id: 'active',
-    icon: '💪',
-    label: 'Active',
-    description: 'Loves sports, enjoys being outdoors'
-},
-{
-    id: 'dreamy',
-    icon: '✨',
-    label: 'Dreamy',
-    description: 'Creative, enjoys art and imagination'
-}
-];
 
 const SAMPLE_FRAGRANCES = [
 {
@@ -67,11 +37,9 @@ const SAMPLE_FRAGRANCES = [
 ];
 
 export default function Chat() {
-    const [selectedPersonality, setSelectedPersonality] = useState(null);
-    const [selectedNote, setSelectedNote] = useState(null);
     const [recommendedFragrances, setRecommendedFragrances] = useState([]);
     const [messages, setMessages] = useState([]);
-    const [step, setStep] = useState(STEP.PERSONALITY);
+    const [step, setStep] = useState(STEP.NAME);
   
     const appendBotMessage = (text) => {
       setMessages(prev => [...prev, { sender: 'bot', text }]);
@@ -83,31 +51,33 @@ export default function Chat() {
   
     // First Render - bot message
     useEffect(() => {
-      appendBotMessage('Select the description that best matches your personality:');
+      appendBotMessage('Hi! Tell me the name of the person you want to find a fragrance for:');
     }, []);
-  
-    const handlePersonalitySelect = (personality) => {
-        setSelectedPersonality(personality);
-        appendUserMessage(personality.label);
-        setTimeout(() => {
-            appendBotMessage('Now, please select the fragrance note you prefer:');
-            setStep(STEP.NOTE);
-        }, 500);
+    
+    const handleNameSubmit = async (name) => {
+        appendUserMessage(name);
+        try{
+            console.log('POSTing to /chat...')
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            });
+
+            if(!res.ok) throw new Error(`API error ${res.status}`);
+
+            const data = await res.json();
+            // data: { message, fragrance }
+            appendBotMessage(data.message || 'Here are some suggestions. ');
+            setRecommendedFragrances(data.fragrances ?? []);
+        } catch (err) {
+            console.error(err);
+            appendBotMessage('Sorry, something went wrong. ');
+            setRecommendedFragrances(SAMPLE_FRAGRANCES);
+        } finally {
+            setStep(STEP.DONE);
+        }
     };
-  
-    const handleNoteSelect = (note) => {
-        setSelectedNote(note);
-        appendUserMessage(note.label);
-        setStep(STEP.DONE);
-        // mock
-        setRecommendedFragrances(SAMPLE_FRAGRANCES);
-    };
-  
-    const NOTE_OPTIONS = [
-        { id: 'citrus', icon: '🍊', label: 'Citrus' },
-        { id: 'woody', icon: '🌲', label: 'Woody' },
-        { id: 'floral', icon: '🌸', label: 'Floral' },
-    ];
   
     return (
         <div className={styles.chatContent}>
@@ -121,19 +91,11 @@ export default function Chat() {
                     </div>
                 ))}
             </div>
-    
-            {step === STEP.PERSONALITY && (
-            <ChatSelector
-                options={SAMPLE_PERSONALITY_OPTIONS}
-                onSelect={handlePersonalitySelect}
-            />
-            )}
-    
-            {step === STEP.NOTE && (
-            <ChatSelector
-                options={NOTE_OPTIONS}
-                onSelect={handleNoteSelect}
-            />
+
+            {step === STEP.NAME && (
+                <MessageInput
+                    onSend={handleNameSubmit}
+                />
             )}
     
             {step === STEP.DONE && (
