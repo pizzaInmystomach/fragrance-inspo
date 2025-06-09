@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from data_handler import DataHandler
-from analyzer import CharacterAnalyzer
+from app.data_handler import DataHandler
+from app.ai.analyzer import CharacterAnalyzer
 import json
 
 def main():
