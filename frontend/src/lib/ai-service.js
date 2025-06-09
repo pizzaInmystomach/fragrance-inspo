@@ -57,10 +57,13 @@ export async function aiChatCompletion(messages) {
               headers.Authorization = `Bearer ${AI_SERVICE_API_KEY}`;
             }
 
-            const res = await fetchWithTimeout(`${AI_SERVICE_URL}/chat`, {
+            const res = await fetchWithTimeout(`${AI_SERVICE_URL}/api/recommendations`, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ messages }),
+                body: JSON.stringify({
+                    character_name: messages[0]?.content ?? '',
+                    source_type: ''
+                }),
             });
 
             // 3) Handle non-2xx HTTP
@@ -78,25 +81,9 @@ export async function aiChatCompletion(messages) {
         }
 
         // 4) Normalise response
-        const {
-          message: aiMessage,
-          analysis = {},
-          needsRecommendation: needsRecModern,
-          needs_recommendation: needsRecLegacy,
-        } = json;
+        const { character, recommendations } = json;
 
-        return {
-            message: typeof aiMessage === 'string' ? aiMessage : '',
-            analysis: {
-                personality: analysis.personality ?? null,
-                notes: analysis.notes ?? [],
-                specificRequest: analysis.specificRequest ?? null,
-                needsRecommendation:
-                  typeof needsRecModern === 'boolean'
-                    ? needsRecModern
-                    : Boolean(needsRecLegacy),
-            },
-        };
+        return { character, recommendations };
     } catch (err) {
         console.error('aiChatCompletion failed error: ', err);
         throw new Error('Failed to complete aiChatCompletion. ');

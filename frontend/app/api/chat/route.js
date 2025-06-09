@@ -20,41 +20,35 @@ export async function POST(req) {
         }
 
         // build chat history from single name input
-        const messages = [
+        const { character, recommendations } = await aiChatCompletion ([
           { role: 'user', content: name.trim() },
-        ];
+        ]);
 
 
-        // ① 把歷史 messages 送進 ai-service.js → Python AI
-        const aiResponse = await aiChatCompletion(messages);
+        // // ① 把歷史 messages 送進 ai-service.js → Python AI
+        // const aiResponse = await aiChatCompletion(messages);
         
-        // ② 從 AI 回傳的 analysis 拆出 personality / notes…
-        const { 
-        personality, 
-        notes, 
-        mood, 
-        occasion, 
-        specificRequest,
-        needsRecommendation
-        } = aiResponse.analysis;
+        // // ② 從 AI 回傳的 analysis 拆出 personality / notes…
+        // const { 
+        // character
+        // } = aiResponse.analysis;
 
-        // ③ 只有在 AI 判斷需要推薦時，才呼叫 DB-service
-        let fragrances = [];
+        // // ③ 只有在 AI 判斷需要推薦時，才呼叫 DB-service
+        // let fragrances = [];
         
-        if (needsRecommendation) {
-            fragrances = await getFragrancesByAttributes({
-                personality,
-                notes,
-                mood,
-                occasion
-            });
-        }
+        // if (needsRecommendation) {
+        //     fragrances = await getFragrancesByAttributes({
+        //         personality,
+        //         notes,
+        //         mood,
+        //         occasion
+        //     });
+        // }
         
-        // ④ 把 AI 回覆的文字、推薦清單、analysis 打包回前端
+        // // ④ 把 AI 回覆的文字、推薦清單、analysis 打包回前端
         return NextResponse.json({
-        message: aiResponse.message,
-        fragrances: fragrances,
-        analysis: aiResponse.analysis
+            character,
+            recommendations
         });
     } catch (error) {
         console.error('Chat API error:', error);
