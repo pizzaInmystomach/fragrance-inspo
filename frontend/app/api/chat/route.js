@@ -16,10 +16,10 @@ export async function POST(request) {
         );
         }
 
-        // Get AI response to understand user intent
+        // ① 把歷史 messages 送進 ai-service.js → Python AI
         const aiResponse = await aiChatCompletion(messages);
         
-        // Extract fragrance preferences from AI analysis
+        // ② 從 AI 回傳的 analysis 拆出 personality / notes…
         const { 
         personality, 
         notes, 
@@ -29,19 +29,19 @@ export async function POST(request) {
         needsRecommendation
         } = aiResponse.analysis;
 
+        // ③ 只有在 AI 判斷需要推薦時，才呼叫 DB-service
         let fragrances = [];
         
-        // Only fetch fragrance recommendations if the AI determined we need them
         if (needsRecommendation) {
-        // Get fragrances from database based on AI analysis
-        fragrances = await getFragrancesByAttributes({
-            personality,
-            notes,
-            mood,
-            occasion
-        });
+            fragrances = await getFragrancesByAttributes({
+                personality,
+                notes,
+                mood,
+                occasion
+            });
         }
         
+        // ④ 把 AI 回覆的文字、推薦清單、analysis 打包回前端
         return NextResponse.json({
         message: aiResponse.message,
         fragrances: fragrances,

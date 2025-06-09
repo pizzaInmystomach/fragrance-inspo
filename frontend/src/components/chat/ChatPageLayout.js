@@ -1,9 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import ChatHistorySidebar from './ChatHistorySidebar';
-import ChatSelector from './ChatSelector';
-import MessageInput from './MessageInput';
 import styles from './ChatPageLayout.module.css';
 
 export default function ChatPageLayout({ children }) {
@@ -19,10 +17,6 @@ export default function ChatPageLayout({ children }) {
             />
             <div className={styles.chatContent}>
                 {children}
-                <MessageInput
-                    onSend={(message) => console.log(message)}
-                    className={styles.messageInput}
-                />
             </div>
         </div>
     );
