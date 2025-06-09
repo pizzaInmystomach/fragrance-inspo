@@ -1,20 +1,30 @@
 import React from 'react';
 import styles from './FragranceRecommendation.module.css';
 
-function FragranceRecommendation({ 
-  fragrances, 
-  title = 'Here are three fragrances I recommend.' 
+/**
+ * @param {Object[]} recommendations – array from backend
+ *   {
+ *     rank: 1,
+ *     fragrance: { id, name, brand, imageUrl },
+ *     rationale: string,
+ *     description: string
+ *   }
+ */
+
+function FragranceRecommendation({
+  recommendations,
+  title = 'Fragrance Recommendations',
 }) {
   return (
     <div className={styles.recommendationContainer}>
       <h3 className={styles.recommendationTitle}>{title}</h3>
       <div className={styles.fragranceGrid}>
-        {fragrances.map((fragrance) => (
-          <div key={fragrance.id} className={styles.fragranceCard}>
+        {recommendations.map((rec) => (
+          <div key={rec.fragrance.id} className={styles.fragranceCard}>
             <div className={styles.fragranceImageContainer}>
-              <img 
-                src={fragrance.imageUrl} 
-                alt={`${fragrance.name} by ${fragrance.brand}`} 
+              <img
+                src={rec.fragrance.imageUrl || '/placeholder.png'}
+                alt={`${rec.fragrance.name} by ${rec.fragrance.brand}`}
                 className={styles.fragranceImage}
               />
               <button className={styles.favoriteButton}>
@@ -24,11 +34,13 @@ function FragranceRecommendation({
               </button>
             </div>
             <div className={styles.fragranceDetails}>
-              <h4 className={styles.fragranceName}>{fragrance.name}</h4>
-              <p className={styles.fragranceBrand}>{fragrance.brand}</p>
-              <p className={styles.fragranceCategories}>
-                {fragrance.categories.join(' • ')}
-              </p>
+              <h4 className={styles.fragranceName}>
+                {rec.rank}. {rec.fragrance.name}
+              </h4>
+              <p className={styles.fragranceBrand}>{rec.fragrance.brand}</p>
+
+              <p className={styles.fragranceRationale}>{rec.rationale}</p>
+              <p className={styles.fragranceDescription}>{rec.description}</p>
             </div>
           </div>
         ))}

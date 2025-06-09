@@ -91,75 +91,119 @@ export default function Chat() {
     };
     
     const handleNameSubmit = async (name) => {
-        appendUserMessage(name);
-        try{
-            console.log('POSTing to /chat...')
-            const res = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name }),
+          appendUserMessage(name);
+          try{
+              console.log('POSTing to /chat...')
+              const res = await fetch('/api/chat', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name }),
+              });
+  
+              if(!res.ok) throw new Error(`API error ${res.status}`);
+  
+              // const data = await res.json();
+              // // data: { message, fragrance }
+              // appendBotMessage(data.message || 'Here are some suggestions. ');
+              // setRecommendedFragrances(data.fragrances ?? []);
+  
+              const { character, recommendations } = await res.json();
+  
+              if(character?.analysis){
+                  appendBotMessage(character.analysis);
+              }else {
+                  appendBotMessage('Here are some suggestions. ')
+              }
+  
+              setRecommendedFragrances(recommendations ?? []);
+          } catch (err) {
+              console.error(err);
+              appendBotMessage('Sorry, something went wrong. ');
+              setRecommendedFragrances(SAMPLE_FRAGRANCES);
+          } finally {
+              setStep(STEP.DONE);
+          }
+      };
+
+    const handleUserSendMessage = async (message) => {
+        appendUserMessage(message); // 顯示使用者訊息
+        try {
+            const response = await axios.post('/api/chat/send-message', {
+                userID: userID,
+                chatID: chatID,
+                message: message,
             });
+            const data = await response.data;
 
-            if(!res.ok) throw new Error(`API error ${res.status}`);
+            if (data.result.status === 200) {
+                // const { character, message: botMessage, recommendations } = res.data;
 
-            const data = await res.json();
-            // data: { message, fragrance }
-            appendBotMessage(data.message || 'Here are some suggestions. ');
-            setRecommendedFragrances(data.fragrances ?? []);
+                // // 顯示 AI 回覆訊息
+                // if (botMessage) {
+                //     appendBotMessage(botMessage);
+                // }
+
+                // // 顯示個性分析文字（如果有）
+                // if (character?.analysis) {
+                //     appendBotMessage(character.analysis);
+                // }
+
+                // 推薦香水
+                // setRecommendedFragrances(recommendations ?? []);
+                setRecommendedFragrances(SAMPLE_FRAGRANCES ?? []);
+            } else {
+                throw new Error(`API error ${res.status}`);
+            }
         } catch (err) {
             console.error(err);
-            appendBotMessage('Sorry, something went wrong. ');
+            appendBotMessage('Sorry, something went wrong.');
             setRecommendedFragrances(SAMPLE_FRAGRANCES);
-        } finally {
-            setStep(STEP.DONE);
         }
     };
+
   
     return (
         <div className={styles.chatContent}>
             <div className={styles.messageBubbleContainer}>
                 {messages.map((msg, idx) => (
                     <div
-                    key={idx}
-                    className={`${styles.messageBubble} ${msg.sender === 'bot' ? styles.botBubble : styles.userBubble}`}
+                        key={idx}
+                        className={`${styles.messageBubble} ${msg.sender === 'bot' ? styles.botBubble : styles.userBubble}`}
                     >
-                    {msg.content}
+                        {msg.content || msg.text}
                     </div>
                 ))}
             </div>
 
             {step === STEP.NAME && (
                 <MessageInput
-                    onSend={handleNameSubmit}
+                    onSend={handleUserSendMessage}
                 />
             )}
     
             {step === STEP.DONE && (
-            <div className={styles.recommendationSection}>
-                <div className={styles.selectedPersonality}>
-                {/* <button
-                    className={styles.resetButton}
-                    onClick={() => {
-                    setSelectedPersonality(null);
-                    setSelectedNote(null);
-                    setRecommendedFragrances([]);
-                    setMessages([]);
-                    setStep(STEP.PERSONALITY);
-                    appendBotMessage('Select the description that best matches your personality:');
-                    }}
-                >
-                    Reset
-                </button> */}
-                </div>
-    
-                {recommendedFragrances.length > 0 && (
-                <FragranceRecommendation
-                    fragrances={recommendedFragrances}
-                    title="Here are three fragrances I recommend."
-                />
-                )}
-            </div>
+                <>
+                    <div className={styles.recommendationSection}>
+                        <div className={styles.selectedPersonality}>
+                            {/* Reset button can be added here if needed */}
+                        </div>
+            
+                        {recommendedFragrances.length > 0 && (
+                            <FragranceRecommendation
+                                fragrances={recommendedFragrances}
+                                recommendations={recommendedFragrances}
+                                title="Here are three fragrances I recommend."
+                            />
+                        )}
+                    </div>
+                    <MessageInput
+                        onSend={handleUserSendMessage}
+                        customInputPlaceholder="Ask me anything about fragrances…"
+                    />
+                </>
             )}
         </div>
+        
     );
-  }
+}
+

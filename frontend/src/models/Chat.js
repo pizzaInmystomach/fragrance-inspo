@@ -31,6 +31,12 @@ const ChatSchema = new mongoose.Schema({
             }
         }
     ],
+    recommendedFragrances: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Fragrance'
+        }
+    ],
     createdAt: {
         type: Date,
         default: Date.now

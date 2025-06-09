@@ -1,51 +1,44 @@
 // app/api/chat/route.js
 
+console.log('AI_SERVICE_URL=>', process.env.AI_SERVICE_URL);
+console.log('AI_SERVICE_API_KEY=>', process.env.AI_SERVICE_API_KEY);
+
 import { NextResponse } from 'next/server';
 import { aiChatCompletion } from '@/lib/ai-service';
 import { getFragrancesByAttributes } from '@/lib/fragrance-service';
 
-export async function POST(request) {
+export async function POST(req) {
     try {
-        const data = await request.json();
-        const { messages, userId } = data;
-        
-        if (!messages || !Array.isArray(messages)) {
-        return NextResponse.json(
-            { error: 'Invalid message format' },
-            { status: 400 }
-        );
+        const {name} = await req.json();
+        console.log('name:', name);
+
+        if (!name || typeof name !== 'string') {
+          return NextResponse.json(
+            { error: 'Name is required' },
+            { status: 400}
+          );
         }
 
-        // ① 把歷史 messages 送進 ai-service.js → Python AI
-        const aiResponse = await aiChatCompletion(messages);
-        
-        // ② 從 AI 回傳的 analysis 拆出 personality / notes…
-        const { 
-        personality, 
-        notes, 
-        mood, 
-        occasion, 
-        specificRequest,
-        needsRecommendation
-        } = aiResponse.analysis;
+        // build chat history from single name input
+        const { character, recommendations } = await aiChatCompletion ([
+          { role: 'user', content: name.trim() },
+        ]);
 
-        // ③ 只有在 AI 判斷需要推薦時，才呼叫 DB-service
-        let fragrances = [];
-        
-        if (needsRecommendation) {
+
+        let fragrances = recommendations;
+
+        if (!fragrances.length) {
+            // 後端沒給清單，再 fallback 用 DB 做
             fragrances = await getFragrancesByAttributes({
-                personality,
-                notes,
-                mood,
-                occasion
+                personality: character.personality,
+                notes: character.notes,
             });
         }
         
-        // ④ 把 AI 回覆的文字、推薦清單、analysis 打包回前端
+        // 把 AI 回覆的文字、推薦清單、analysis 打包回前端
         return NextResponse.json({
-        message: aiResponse.message,
-        fragrances: fragrances,
-        analysis: aiResponse.analysis
+            character,
+            recommendations: fragrances
         });
     } catch (error) {
         console.error('Chat API error:', error);

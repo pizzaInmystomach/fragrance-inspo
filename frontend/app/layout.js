@@ -3,7 +3,6 @@
 import { SessionProvider } from 'next-auth/react'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { metadata } from './metadata'
 
 // 字體設定
 const geistSans = Geist({
@@ -15,8 +14,6 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 })
-
-export { metadata }
 // Root Layout
 export default function RootLayout({ children }) {
   return (

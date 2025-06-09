@@ -1,0 +1,17 @@
+// frontend/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model Fragrance {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  Name      String
+  Brand     String
+  Accords   String?
+  CreatedAt DateTime @default(now())
+}

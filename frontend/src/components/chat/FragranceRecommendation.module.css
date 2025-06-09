@@ -79,3 +79,13 @@
     font-size: 0.8rem;
     color: #aaa;
 }
+.fragranceRationale {
+    font-size: 0.85rem;
+    color: #555;
+    margin: 10px 0 6px;
+}
+.fragranceDescription {
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.35;
+}
