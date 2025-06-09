@@ -24,22 +24,21 @@ export async function POST(req) {
           { role: 'user', content: name.trim() },
         ]);
 
-        // // ③ 只有在 AI 判斷需要推薦時，才呼叫 DB-service
-        // let fragrances = [];
+
+        let fragrances = recommendations;
+
+        if (!fragrances.length) {
+            // 後端沒給清單，再 fallback 用 DB 做
+            fragrances = await getFragrancesByAttributes({
+                personality: character.personality,
+                notes: character.notes,
+            });
+        }
         
-        // if (needsRecommendation) {
-        //     fragrances = await getFragrancesByAttributes({
-        //         personality,
-        //         notes,
-        //         mood,
-        //         occasion
-        //     });
-        // }
-        
-        // // ④ 把 AI 回覆的文字、推薦清單、analysis 打包回前端
+        // 把 AI 回覆的文字、推薦清單、analysis 打包回前端
         return NextResponse.json({
             character,
-            recommendations
+            recommendations: fragrances
         });
     } catch (error) {
         console.error('Chat API error:', error);

@@ -12,30 +12,6 @@ const STEP = {
     DONE: 'done',
 };
 
-const SAMPLE_FRAGRANCES = [
-{
-    id: '1',
-    name: 'Oud Royal',
-    brand: 'Giorgio Armani Privé',
-    imageUrl: '/fragrance01.png',
-    categories: ['Woody', 'Oriental']
-},
-{
-    id: '2',
-    name: 'Blood Oranges',
-    brand: 'Shay & Blue',
-    imageUrl: '/fragrance02.png',
-    categories: ['Fruity', 'Citrus']
-},
-{
-    id: '3',
-    name: 'Sartorial',
-    brand: 'Penhaligon\'s',
-    imageUrl: '/fragrance03.png',
-    categories: ['Woody', 'Spicy']
-}
-];
-
 export default function Chat() {
     const [recommendedFragrances, setRecommendedFragrances] = useState([]);
     const [messages, setMessages] = useState([]);
@@ -66,10 +42,20 @@ export default function Chat() {
 
             if(!res.ok) throw new Error(`API error ${res.status}`);
 
-            const data = await res.json();
-            // data: { message, fragrance }
-            appendBotMessage(data.message || 'Here are some suggestions. ');
-            setRecommendedFragrances(data.fragrances ?? []);
+            // const data = await res.json();
+            // // data: { message, fragrance }
+            // appendBotMessage(data.message || 'Here are some suggestions. ');
+            // setRecommendedFragrances(data.fragrances ?? []);
+
+            const { character, recommendations } = await res.json();
+
+            if(character?.analysis){
+                appendBotMessage(character.analysis);
+            }else {
+                appendBotMessage('Here are some suggestions. ')
+            }
+
+            setRecommendedFragrances(recommendations ?? []);
         } catch (err) {
             console.error(err);
             appendBotMessage('Sorry, something went wrong. ');
@@ -117,10 +103,9 @@ export default function Chat() {
                 </div>
     
                 {recommendedFragrances.length > 0 && (
-                <FragranceRecommendation
-                    fragrances={recommendedFragrances}
-                    title="Here are three fragrances I recommend."
-                />
+                  <FragranceRecommendation
+                    recommendations={recommendedFragrances}
+                  />
                 )}
             </div>
             )}

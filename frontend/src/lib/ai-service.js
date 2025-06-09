@@ -62,7 +62,7 @@ export async function aiChatCompletion(messages) {
                 headers,
                 body: JSON.stringify({
                     character_name: messages[0]?.content ?? '',
-                    source_type: 'books'
+                    source_type: 'unknown'
                 }),
             });
 
@@ -82,6 +82,8 @@ export async function aiChatCompletion(messages) {
 
         // 4) Normalise response
         const { character, recommendations } = json;
+        console.log('character: ', character);
+        console.log('recommendations: ', recommendations);
 
         return { character, recommendations };
     } catch (err) {
