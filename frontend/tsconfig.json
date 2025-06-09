@@ -17,7 +17,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve", // <== 這行最重要，啟用 JSX 支援
-    "baseUrl": ".",
+    "baseUrl": "",
     "paths": {
       "@/*": [
         "src/*"

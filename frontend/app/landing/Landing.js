@@ -1,48 +1,42 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import styles from './Landing.module.css';
-import MainLayout from '../MainLayout';
+import { useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import styles from './Landing.module.css'
+import GoogleLoginButton from '@/components/GoogleLoginButton.js'
 
 export default function Landing() {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0)
 
-  // === Testimonials 資料 ===
   const testimonials = [
     {
       text: "Incredibly accurate! The fragrance the system recommended feels genuinely 'me'.",
       author: "Emily K.",
-      age: "32"
+      age: "32",
     },
     {
       text: "The personality matching system is brilliant. I've found my signature scent!",
       author: "James T.",
-      age: "28"
+      age: "28",
     },
     {
       text: "I was skeptical at first, but the recommended fragrance perfectly captures my essence.",
       author: "Sophia R.",
-      age: "35"
-    }
-  ];
+      age: "35",
+    },
+  ]
 
-  // === Testimonials 導覽功能 ===
   const prevSlide = () => {
-    setCurrentSlide((prev) =>
-      prev === 0 ? testimonials.length - 1 : prev - 1
-    );
-  };
+    setCurrentSlide((prev) => (prev === 0 ? testimonials.length - 1 : prev - 1))
+  }
 
   const nextSlide = () => {
-    setCurrentSlide((prev) =>
-      prev === testimonials.length - 1 ? 0 : prev + 1
-    );
-  };
+    setCurrentSlide((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1))
+  }
 
   return (
-    <MainLayout>
+    <>
       {/* === Hero 區塊 === */}
       <section className={styles.hero}>
         <div className={styles.container}>
@@ -57,6 +51,11 @@ export default function Landing() {
                 stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
+
+          {/* 登入按鈕加在 Hero 區底下 */}
+          <div style={{ marginTop: '30px' }}>
+            <GoogleLoginButton />
+          </div>
         </div>
       </section>
 
@@ -65,40 +64,30 @@ export default function Landing() {
         <div className={styles.container}>
           <h2>How It Works</h2>
           <div className={styles.dottedLine}></div>
-
-          {/* Step 1 */}
-          <div className={styles.step}>
-            <div className={styles.stepImage}>
-              <Image src="https://yourcdn.com/images/work1.png" alt="Profile You" width={240} height={240} unoptimized />
+          {/* 3 Steps */}
+          {[1, 2, 3].map((step, index) => (
+            <div className={styles.step} key={step}>
+              <div className={styles.stepImage}>
+                <Image
+                  src={`https://yourcdn.com/images/work${step}.png`}
+                  alt={`Step ${step}`}
+                  width={240}
+                  height={240}
+                  unoptimized
+                />
+              </div>
+              <div className={styles.stepContent}>
+                <div className={styles.stepNumber}># Step {step}</div>
+                <p>
+                  {[
+                    'Enter the name of a celebrity or character you\'re interested in.',
+                    'The system will recommend a selection of perfumes that reflect their personality.',
+                    'Add your preferred scents to your personal library for future reference.',
+                  ][index]}
+                </p>
+              </div>
             </div>
-            <div className={styles.stepContent}>
-              <div className={styles.stepNumber}>#Step 1 Find Your Inspiration</div>
-              <p>Enter the name of a celebrity or character you're interested in..</p>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className={styles.step}>
-            <div className={styles.stepImage}>
-              <Image src="https://yourcdn.com/images/work2.png" alt="Share Inspirations" width={240} height={240} unoptimized />
-            </div>
-            <div className={styles.stepContent}>
-              <div className={styles.stepNumber}># Step 2 Discover Matching Scents</div>
-              <p>The system will recommend a selection of perfumes that reflect their personality.</p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className={styles.step}>
-            <div className={styles.stepImage}>
-              <Image src="https://yourcdn.com/images/work3.png" alt="Smart Match" width={240} height={240} unoptimized />
-            </div>
-            <div className={styles.stepContent}>
-              <div className={styles.stepNumber}># Step 3 Save Your Favorites</div>
-              <p>Add your preferred scents to your personal library for future reference.</p>
-            </div>
-          </div>
-
+          ))}
         </div>
       </section>
 
@@ -106,22 +95,13 @@ export default function Landing() {
       <section className={styles.features} id="features">
         <div className={styles.container}>
           <h2>Our feature</h2>
-
           <div className={styles.featureGrid}>
-            <div className={styles.featureCard}>
-              <h3>Celebrity scent recommendation</h3>
-              <div className={styles.featureNumber}>01</div>
-            </div>
-
-            <div className={styles.featureCard}>
-              <h3>character scent recommendation</h3>
-              <div className={styles.featureNumber}>02</div>
-            </div>
-
-            <div className={styles.featureCard}>
-              <h3>Scent Library</h3>
-              <div className={styles.featureNumber}>03</div>
-            </div>
+            {['Celebrity scent recommendation', 'Character scent recommendation', 'Scent Library'].map((title, index) => (
+              <div className={styles.featureCard} key={index}>
+                <h3>{title}</h3>
+                <div className={styles.featureNumber}>0{index + 1}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -165,32 +145,33 @@ export default function Landing() {
       <section className={styles.faq} id="FAQ">
         <div className={styles.container}>
           <h2>FAQ</h2>
-
           <div className={styles.faqList}>
-            {/* FAQ 1 */}
             <div className={styles.faqItem}>
               <div className={styles.faqQuestion}>
                 <div className={styles.faqIcon}>?</div>
                 <h3>How do I create my first scent profile?</h3>
               </div>
               <div className={styles.faqAnswer}>
-                <p>Simply click the "Start Exploring" button, fill out the personal questionnaire, share your preferences and sources of inspiration, and our system will instantly generate a personalized scent recommendation for you.</p>
+                <p>
+                  Simply click the "Start Exploring" button, fill out the personal questionnaire, share your preferences and sources of inspiration, and our system will instantly generate a personalized scent recommendation for you.
+                </p>
               </div>
             </div>
 
-            {/* FAQ 2 */}
             <div className={styles.faqItem}>
               <div className={styles.faqQuestion}>
                 <div className={styles.faqIcon}>?</div>
                 <h3>Do I need to create an account to use Fragrance Inspo?</h3>
               </div>
               <div className={styles.faqAnswer}>
-                <p>An account is not required for basic recommendations, but creating an account allows you to save your scent profile, keep track of your favorite fragrances, and gain access to more personalized features.</p>
+                <p>
+                  An account is not required for basic recommendations, but creating an account allows you to save your scent profile, keep track of your favorite fragrances, and gain access to more personalized features.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
-    </MainLayout>
-  );
+    </>
+  )
 }
