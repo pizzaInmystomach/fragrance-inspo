@@ -24,15 +24,6 @@ export async function POST(req) {
           { role: 'user', content: name.trim() },
         ]);
 
-
-        // // ① 把歷史 messages 送進 ai-service.js → Python AI
-        // const aiResponse = await aiChatCompletion(messages);
-        
-        // // ② 從 AI 回傳的 analysis 拆出 personality / notes…
-        // const { 
-        // character
-        // } = aiResponse.analysis;
-
         // // ③ 只有在 AI 判斷需要推薦時，才呼叫 DB-service
         // let fragrances = [];
         

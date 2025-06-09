@@ -23,8 +23,8 @@ const isInvalidMessages = (msgs) =>
       m.content.trim().length > 0,
   );
 
-/** fetch with abort timeout (default 10s) */
-async function fetchWithTimeout(url, opts, timeoutMs = 10_000) {
+/** fetch with abort timeout (default 30s) */
+async function fetchWithTimeout(url, opts, timeoutMs = 30_000) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
@@ -62,7 +62,7 @@ export async function aiChatCompletion(messages) {
                 headers,
                 body: JSON.stringify({
                     character_name: messages[0]?.content ?? '',
-                    source_type: ''
+                    source_type: 'books'
                 }),
             });
 
