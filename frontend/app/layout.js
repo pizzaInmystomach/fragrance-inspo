@@ -22,6 +22,12 @@ const geistMono = Geist_Mono({
 export default function RootLayout({ children }) {
   return (
     <html lang="zh-TW">
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SessionProvider>
           <MainLayout>
