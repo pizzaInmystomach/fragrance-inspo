@@ -1,0 +1,593 @@
+/* Container */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8d5ff 0%, #d1b3ff 25%, #c4a1ff 50%, #b899ff 75%, #a688ff 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Main Content */
+.main {
+  width: 100%;
+  max-width: 1200px;
+  position: relative;
+  z-index: 5;
+  padding: 5rem 0;
+}
+
+.signupSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+/* Signup Form */
+.signupContainer {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.signupContent {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 3rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.nameRow {
+  display: grid;
+  grid-template-columns: 220px 160px;
+  gap: 1rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.input {
+  padding: 1rem 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+}
+
+.passwordHint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.termsSection {
+  margin: 0.5rem 0;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.checkbox input {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.checkbox input:checked + .checkmark {
+  background: white;
+  border-color: white;
+}
+
+.checkbox input:checked + .checkmark::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #a688ff;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.link {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.3s ease;
+}
+
+.link:hover {
+  opacity: 0.8;
+}
+
+.submitButton {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 1.25rem 2rem;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(10px);
+  margin-top: 1rem;
+}
+
+.submitButton:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.arrow {
+  transition: transform 0.3s ease;
+}
+
+.submitButton:hover .arrow {
+  transform: translateX(4px);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Divider */
+.divider {
+  text-align: center;
+  position: relative;
+  margin: 2rem 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 1;
+}
+
+.divider span {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0 1rem;
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+}
+
+/* Social Buttons */
+.socialButtons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.socialButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.socialButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.googleIcon, .appleIcon {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.loginLink {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.loginLink a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.3s ease;
+}
+
+.loginLink a:hover {
+  opacity: 0.8;
+}
+
+/* Illustration Section */
+.illustrationSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.illustration {
+  position: relative;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 300px;
+  height: 300px;
+}
+
+.perfumeCollection {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.bottle1, .bottle2, .bottle3 {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bottle1 {
+  transform: rotate(-5deg);
+}
+
+.bottle2 {
+  transform: scale(1.1);
+  z-index: 3;
+}
+
+.bottle3 {
+  transform: rotate(5deg);
+}
+
+.bottle1 .bottleBody, .bottle2 .bottleBody, .bottle3 .bottleBody {
+  width: 50px;
+  height: 80px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+  border-radius: 0 0 25px 25px;
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.bottle2 .bottleBody {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
+}
+
+.bottle1 .bottleTop, .bottle2 .bottleTop, .bottle3 .bottleTop {
+  width: 20px;
+  height: 25px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px 10px 3px 3px;
+  backdrop-filter: blur(20px);
+  margin-bottom: 5px;
+}
+
+.bottle1 .bottleTop::after, .bottle2 .bottleTop::after, .bottle3 .bottleTop::after {
+  content: '';
+  width: 12px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px 6px 0 0;
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.floatingElements {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.heart {
+  position: absolute;
+  top: 20%;
+  left: 15%;
+  width: 16px;
+  height: 16px;
+  background: white;
+  transform: rotate(45deg);
+  opacity: 0.7;
+  animation: float 3s ease-in-out infinite;
+}
+
+.heart::before, .heart::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+}
+
+.heart::before {
+  top: -8px;
+  left: 0;
+}
+
+.heart::after {
+  top: 0;
+  left: -8px;
+}
+
+.star {
+  position: absolute;
+  top: 30%;
+  right: 10%;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 12px solid white;
+  opacity: 0.6;
+  animation: float 4s ease-in-out infinite 1s;
+}
+
+.star::after {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 4px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 12px solid white;
+}
+
+.circle {
+  position: absolute;
+  bottom: 25%;
+  left: 20%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid white;
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: float 3.5s ease-in-out infinite 0.5s;
+}
+
+.sparkles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: white;
+  border-radius: 50%;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.sparkle:nth-child(1) {
+  top: 15%;
+  left: 25%;
+  animation-delay: 0s;
+}
+
+.sparkle:nth-child(2) {
+  top: 70%;
+  right: 25%;
+  animation-delay: 0.5s;
+}
+
+.sparkle:nth-child(3) {
+  bottom: 20%;
+  left: 10%;
+  animation-delay: 1s;
+}
+
+.sparkle:nth-child(4) {
+  top: 45%;
+  right: 15%;
+  animation-delay: 1.5s;
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px);
+  }
+  50% { 
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% { 
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.illustrationText h3 {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.illustrationText p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .signupSection {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .signupContent {
+    padding: 2rem;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .nameRow {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .socialButtons {
+    flex-direction: column;
+  }
+  
+  .illustration {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .illustrationText h3 {
+    font-size: 1.5rem;
+  }
+}

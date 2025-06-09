@@ -1,0 +1,506 @@
+/* Container */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8d5ff 0%, #d1b3ff 25%, #c4a1ff 50%, #b899ff 75%, #a688ff 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 25px;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  position: relative;
+}
+
+.logoIcon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+}
+
+.navLinks {
+  display: flex;
+  gap: 2rem;
+}
+
+.navLink {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-weight: 400;
+  transition: color 0.3s ease;
+}
+
+.navLink:hover {
+  color: white;
+}
+
+/* Main Content */
+.main {
+  padding: 5rem 0;
+  position: relative;
+  z-index: 5;
+}
+
+.loginSection {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  min-height: calc(100vh - 120px);
+}
+.loginSection h1 {
+    text-align: left;
+}
+
+/* Login Form */
+.loginContainer {
+  max-width: 450px;
+  margin: 0 auto;
+}
+
+.loginContent {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 3rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.input {
+  padding: 1rem 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.formOptions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -0.5rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkbox input {
+  display: none;
+}
+
+.checkmark {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.checkbox input:checked + .checkmark {
+  background: white;
+  border-color: white;
+}
+
+.checkbox input:checked + .checkmark::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #a688ff;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.forgotLink {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.forgotLink:hover {
+  color: white;
+}
+
+.submitButton {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.submitButton:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.arrow {
+  transition: transform 0.3s ease;
+}
+
+.submitButton:hover .arrow {
+  transform: translateX(4px);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Divider */
+.divider {
+  text-align: center;
+  position: relative;
+  margin: 2rem 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 1;
+}
+
+.divider span {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0 1rem;
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+}
+
+/* Social Buttons */
+.socialButtons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.socialButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.socialButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.googleIcon, .appleIcon {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.signupLink {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.signupLink a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.3s ease;
+}
+
+.signupLink a:hover {
+  opacity: 0.8;
+}
+
+/* Illustration Section */
+.illustrationSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.illustration {
+  position: relative;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.perfumeBottle {
+  position: relative;
+  width: 120px;
+  height: 200px;
+}
+
+.bottleBody {
+  width: 80px;
+  height: 120px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+  border-radius: 0 0 40px 40px;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.bottleTop {
+  width: 30px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 15px 15px 5px 5px;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  backdrop-filter: blur(20px);
+}
+
+.bottleTop::after {
+  content: '';
+  width: 20px;
+  height: 15px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px 10px 0 0;
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bottleLabel {
+  width: 50px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+}
+
+.sparkles {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.sparkle:nth-child(1) {
+  top: 20%;
+  left: 30%;
+  animation-delay: 0s;
+}
+
+.sparkle:nth-child(2) {
+  top: 60%;
+  right: 20%;
+  animation-delay: 0.7s;
+}
+
+.sparkle:nth-child(3) {
+  bottom: 30%;
+  left: 20%;
+  animation-delay: 1.4s;
+}
+
+@keyframes sparkle {
+  0%, 100% { 
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.illustrationText h3 {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.illustrationText p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .loginSection {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: center;
+  }
+  
+  .loginContent {
+    padding: 2rem;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .navLinks {
+    display: none;
+  }
+  
+  .socialButtons {
+    flex-direction: column;
+  }
+}

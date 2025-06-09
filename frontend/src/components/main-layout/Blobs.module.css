@@ -20,7 +20,7 @@
 
 /* 自訂顏色 */
 .black {
-  background: rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #e8d5ff 0%, #d1b3ff 25%, #c4a1ff 50%, #b899ff 75%, #a688ff 100%);
 }
 
 .blue {

@@ -3,7 +3,6 @@
 import { SessionProvider } from 'next-auth/react'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import MainLayout from './MainLayout'
 
 // 字體設定
 const geistSans = Geist({
@@ -30,9 +29,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SessionProvider>
-          <MainLayout>
-            {children}
-          </MainLayout>
+          {children}
         </SessionProvider>
       </body>
     </html>

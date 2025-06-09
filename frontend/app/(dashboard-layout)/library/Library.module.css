@@ -1,9 +1,10 @@
 .collectionPage {
   padding: 2rem 6vw;
-  background: var(--clr-bg);
+  background: #ffffff60;
   min-height: 100vh;
   font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
   color: var(--clr-primary);
+  overflow: auto;
 }
 
 /* ---------- Header ---------- */
