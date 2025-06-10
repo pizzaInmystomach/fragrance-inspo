@@ -57,15 +57,14 @@ export async function middleware(request) {
     }
   };
 
-  // 🚫 已登入者訪問 login 或 register，導向 chat
   if (isAuthPage && authToken) {
-    console.log('🔄 Auth page with token - verifying...');
+    console.log('Auth page with token - verifying...');
     const user = await verifyToken(authToken);
     if (user) {
-      console.log('🔄 Redirecting authenticated user to /chat');
+      console.log('Redirecting authenticated user to /chat');
       return NextResponse.redirect(new URL("/chat", request.url));
     } else {
-      console.log('🔄 Token invalid - staying on auth page');
+      console.log('Token invalid - staying on auth page');
       // Token 無效，清除 cookie
       const response = NextResponse.next();
       response.cookies.delete('auth_token');
@@ -73,12 +72,12 @@ export async function middleware(request) {
     }
   }
 
-  // 🔒 受保護頁面，需驗證
+  // 受保護頁面，需驗證
   if (isProtectedPath) {
-    console.log('🔒 Protected path accessed');
+    console.log('Protected path accessed');
     
     if (!authToken) {
-      console.log('🔒 No token - redirecting to login');
+      console.log('No token - redirecting to login');
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
@@ -86,7 +85,7 @@ export async function middleware(request) {
 
     const user = await verifyToken(authToken);
     if (!user) {
-      console.log('🔒 Invalid token - redirecting to login');
+      console.log('Invalid token - redirecting to login');
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       const response = NextResponse.redirect(loginUrl);
@@ -94,7 +93,7 @@ export async function middleware(request) {
       return response;
     }
 
-    console.log('🔒 Token valid - allowing access');
+    console.log('Token valid - allowing access');
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-user-id", user.id);
     requestHeaders.set("x-user-email", user.email);

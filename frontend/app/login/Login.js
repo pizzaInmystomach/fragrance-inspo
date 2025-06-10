@@ -71,7 +71,7 @@ export default function LoginPage() {
               </p>
 
               <form onSubmit={handleSubmit} className={styles.form}>
-                <GoogleLoginButton />
+                {/* <GoogleLoginButton /> */}
                 <div className={styles.inputGroup}>
                   <label htmlFor="email" className={styles.label}>
                     Email Address

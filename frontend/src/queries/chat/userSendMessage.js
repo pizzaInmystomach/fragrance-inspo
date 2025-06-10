@@ -67,80 +67,89 @@ export const userSendMessage = async (data) => {
                 chatId: chatID,
             });
 
-            // 建立聊天歷史格式供 AI 分析
-            const chatHistory = updatedChat.messages
-                .filter(msg => msg.sender === 'user') // 只取用戶訊息用於分析
-                .map(msg => ({
-                    role: 'user',
-                    content: msg.content
-                }));
+            // 建立完整聊天歷史格式供 AI 分析
+            const chatHistory = updatedChat.messages.map(msg => ({
+                role: msg.sender === 'user' ? 'user' : 'ai',
+                content: msg.content
+            }));
 
-            // 如果沒有聊天歷史，至少用當前訊息
+            // 確保至少有當前訊息
             if (chatHistory.length === 0) {
                 chatHistory.push({ role: 'user', content: message });
             }
+
+            console.log('Sending to AI service with chat history:', chatHistory);
 
             // 調用 AI 服務
             const aiResult = await aiChatCompletion(chatHistory);
             character = aiResult.character;
             recommendations = aiResult.recommendations || [];
 
-            // 如果 AI 沒有回傳推薦清單，使用資料庫 fallback
+            console.log('AI service returned:', { character, recommendations });
+
+            // 如果 AI 沒有回傳推薦清單使用 fallback
             if (!recommendations.length && character) {
-                recommendations = await getFragrancesByAttributes({
-                    personality: character.personality,
-                    notes: character.notes,
-                });
+                console.log('Using database fallback for recommendations');
+                try {
+                    recommendations = await getFragrancesByAttributes({
+                        personality: character.personality,
+                        notes: character.notes,
+                        limit: 3
+                    });
+                } catch (dbError) {
+                    console.error('Database fallback error:', dbError);
+                    // 如果資料庫失敗使用預設推薦
+                    recommendations = [];
+                }
             }
 
             // 產生 bot 回覆訊息
             if (character && recommendations.length > 0) {
-                botReply = `基於您的訊息，我分析您的個性特質是：${character.personality || '獨特且有趣'}。為您推薦了 ${recommendations.length} 款香水！`;
+                const personalityText = character.personality || '獨特且有趣';
+                const analysisText = character.analysis || `我分析您的個性特質是：${personalityText}`;
+                botReply = `${analysisText} 為您推薦了 ${recommendations.length} 款香水！`;
+            } else if (character && character.analysis) {
+                botReply = character.analysis;
             } else {
                 botReply = `感謝您的訊息！我正在為您分析最適合的香水推薦。`;
             }
 
-            // 建立 bot 回覆訊息並存入資料庫
-            const botMessage = {
-                sender: 'bot',
-                content: botReply,
-                timestamp: new Date().toISOString(),
-                // 可選：將分析結果也存入訊息中
-                metadata: {
-                    character: character,
-                    recommendationCount: recommendations.length
-                }
-            };
-
-            await chat_collection.updateOne(
-                { chatId: chatID },
-                {
-                    $push: {
-                        messages: botMessage,
-                    },
-                }
-            );
-
         } catch (aiError) {
             console.error('AI service error:', aiError);
             // AI 失敗時的 fallback 回覆
-            botReply = '感謝您的訊息！我會儘快為您提供香水推薦。';
+            botReply = '感謝您的訊息！讓我為您提供一些香水推薦。';
             
-            const fallbackBotMessage = {
-                sender: 'bot',
-                content: botReply,
-                timestamp: new Date().toISOString(),
-            };
-
-            await chat_collection.updateOne(
-                { chatId: chatID },
-                {
-                    $push: {
-                        messages: fallbackBotMessage,
-                    },
-                }
-            );
+            // 嘗試使用基本的資料庫查詢作為 fallback
+            try {
+                recommendations = await getFragrancesByAttributes({
+                    limit: 3
+                });
+            } catch (dbError) {
+                console.error('Database fallback also failed:', dbError);
+                recommendations = [];
+            }
         }
+
+        // 建立 bot 回覆訊息並存入資料庫
+        const botMessage = {
+            sender: 'bot',
+            content: botReply,
+            timestamp: new Date().toISOString(),
+            metadata: {
+                character: character,
+                recommendationCount: recommendations.length,
+                hasRecommendations: recommendations.length > 0
+            }
+        };
+
+        await chat_collection.updateOne(
+            { chatId: chatID },
+            {
+                $push: {
+                    messages: botMessage,
+                },
+            }
+        );
 
         return {
             status: 200,

@@ -64,38 +64,46 @@ const TypewriterMessage = ({ message, isComplete, onComplete }) => {
 };
 
 export default function Chat() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const chatID = pathname.split('/').slice(-1)[0];
+    // const userID = localStorage.getItem('userID');
     const [recommendedFragrances, setRecommendedFragrances] = useState([]);
     const [messages, setMessages] = useState([]);
     const [step, setStep] = useState(STEP.NAME);
     const [typingMessageIndex, setTypingMessageIndex] = useState(-1);
     const [isInputDisabled, setIsInputDisabled] = useState(false);
-    const router = useRouter();
-    const pathname = usePathname();
-    const chatID = pathname.split('/').slice(-1)[0];
-    const userID = localStorage.getItem('userID');
-    // const userID = process.env.NEXT_PUBLIC_USER_ID;
+    const [currentCharacter, setCurrentCharacter] = useState(null);
+    const [chatLoading, setChatLoading] = useState(true);
+    const [userID, setUserID] = useState(null);
 
-    const handleGetMessages = async () => {
+    const getUserID = async() => {
         try {
-            const response = await axios.get(`/api/get-chat`+ `?userID=${userID}&chatID=${chatID}`);
+            const response = await axios.get('/api/auth/verify');
             const data = await response.data;
-            const messages = data.chat.messages;
-            setMessages(messages);
-            } catch (error) {
-            console.error('Error fetching messages:', error);
+            if (data.status === 200) {
+                const userID = data.user.id;
+                setUserID(userID);
+                await handleFindChatExists(userID);
+            } else {
+                console.error('Error fetching user ID:', data.message);
+                router.push('/chat/not-found');
+            }
+        } catch (error) {
+            console.error('Error fetching user ID:', error);
+            router.push('/chat/not-found');
         }
     }
-    const handleFindChatExists = async () => {
+
+    const handleFindChatExists = async (userID) => {
         try {
             const response = await axios.get(`/api/get-chat?userID=${userID}&chatID=${chatID}`);
             
-            if (response.status === 200) {
+            if (response.data.status === 200) {
                 const data = response.data;
-                if (data.chat && data.chat.messages) {
-                    setMessages(data.chat.messages);
-                } else {
-                    router.push('/chat/not-found');
-                }
+                const messages = data.chat.messages;
+                setMessages(messages);
+                setChatLoading(false);
             } else {
                 router.push('/chat/not-found');
             }
@@ -104,9 +112,8 @@ export default function Chat() {
             router.push('/chat/not-found');
         }
     }
-    
     useEffect(() => {
-        handleFindChatExists();
+        getUserID();
     }, []);
     
     
@@ -172,47 +179,95 @@ export default function Chat() {
           }
       };
 
+    // const handleUserSendMessage = async (message) => {
+    //     appendUserMessage(message); // 顯示使用者訊息
+    //     try {
+    //         const response = await axios.post('/api/chat/send-message', {
+    //             userID: userID,
+    //             chatID: chatID,
+    //             message: message,
+    //         });
+    //         const data = await response.data;
+
+    //         if (data.result.status === 200) {
+    //             // const { character, message: botMessage, recommendations } = res.data;
+
+    //             // // 顯示 AI 回覆訊息
+    //             if (data.result.botReply) {
+    //                 appendBotMessage(data.result.botReply);
+    //             }
+
+    //             // // 顯示個性分析文字（如果有）
+    //             // if (character?.analysis) {
+    //             //     appendBotMessage(character.analysis);
+    //             // }
+
+    //             // 推薦香水
+    //             // setRecommendedFragrances(recommendations ?? []);
+    //             // 立即顯示 bot 回覆
+    //             // if (result.botReply) {
+    //             // displayMessage(result.botReply, 'bot');
+    //             // }
+                
+    //             // // 如果有推薦資料也一併處理
+    //             // if (result.recommendations && result.recommendations.length > 0) {
+    //             // displayRecommendations(result.recommendations);
+    //             // }
+    //             setRecommendedFragrances(SAMPLE_FRAGRANCES ?? []);
+    //         } else {
+    //             throw new Error(`API error ${res.status}`);
+    //         }
+    //     } catch (err) {
+    //         console.error(err);
+    //         // appendBotMessage('Sorry, something went wrong.');
+    //         setRecommendedFragrances(SAMPLE_FRAGRANCES);
+    //     }
+    // };
+
     const handleUserSendMessage = async (message) => {
-        appendUserMessage(message); // 顯示使用者訊息
+        appendUserMessage(message);
+        
         try {
+            console.log('Sending message to backend:', { userID, chatID, message });
+            
             const response = await axios.post('/api/chat/send-message', {
                 userID: userID,
                 chatID: chatID,
                 message: message,
             });
-            const data = await response.data;
+            
+            const data = response.data;
+            console.log('Backend response:', data);
 
-            if (data.result.status === 200) {
-                // const { character, message: botMessage, recommendations } = res.data;
-
-                // // 顯示 AI 回覆訊息
+            if (data.result && data.result.status === 200) {
+                // 顯示 AI 回覆訊息
                 if (data.result.botReply) {
-                    appendBotMessage(data.result.botReply);
+                    appendBotMessage(data.result.botReply, {
+                        character: data.result.character,
+                        recommendationCount: data.result.recommendations?.length || 0
+                    });
                 }
 
-                // // 顯示個性分析文字（如果有）
-                // if (character?.analysis) {
-                //     appendBotMessage(character.analysis);
-                // }
+                // 更新角色資訊
+                if (data.result.character) {
+                    setCurrentCharacter(data.result.character);
+                }
 
-                // 推薦香水
-                // setRecommendedFragrances(recommendations ?? []);
-                // 立即顯示 bot 回覆
-                // if (result.botReply) {
-                // displayMessage(result.botReply, 'bot');
-                // }
-                
-                // // 如果有推薦資料也一併處理
-                // if (result.recommendations && result.recommendations.length > 0) {
-                // displayRecommendations(result.recommendations);
-                // }
-                setRecommendedFragrances(SAMPLE_FRAGRANCES ?? []);
+                // 更新推薦香水
+                if (data.result.recommendations && data.result.recommendations.length > 0) {
+                    setRecommendedFragrances(data.result.recommendations);
+                } else {
+                    // 如果沒有 AI 推薦，使用樣本數據
+                    setRecommendedFragrances(SAMPLE_FRAGRANCES);
+                }
             } else {
-                throw new Error(`API error ${res.status}`);
+                throw new Error(data.message || 'API request failed');
             }
         } catch (err) {
-            console.error(err);
-            // appendBotMessage('Sorry, something went wrong.');
+            console.error('Error sending message:', err);
+            
+            // 錯誤處理：顯示錯誤訊息並提供 fallback
+            appendBotMessage('抱歉，處理您的訊息時發生了錯誤。讓我為您提供一些基本推薦。');
             setRecommendedFragrances(SAMPLE_FRAGRANCES);
         }
     };
@@ -220,7 +275,8 @@ export default function Chat() {
   
     return (
         <div className={styles.chatContent}>
-            <div className={styles.messageBubbleContainer}>
+            {chatLoading && <div className={styles.loadingChat}>Loading...</div>}
+            {!chatLoading && <div className={styles.messageBubbleContainer}>
                 {/* {messages.map((msg, idx) => (
                     <div
                         key={idx}
@@ -245,7 +301,7 @@ export default function Chat() {
                         )}
                     </div>
                 ))}
-            </div>
+            </div>}
 
             {step === STEP.NAME && (
                 <MessageInput
