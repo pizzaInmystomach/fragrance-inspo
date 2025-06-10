@@ -24,7 +24,7 @@ const isInvalidMessages = (msgs) =>
   );
 
 /** fetch with abort timeout (default 30s) */
-async function fetchWithTimeout(url, opts, timeoutMs = 30_000) {
+async function fetchWithTimeout(url, opts, timeoutMs = 60_000) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
