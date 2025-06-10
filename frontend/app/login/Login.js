@@ -4,6 +4,7 @@ import { useState } from 'react';
 import styles from './Login.module.css';
 import GoogleLoginButton from '@/components/GoogleLoginButton';
 import DynamicBlobsBackground from '@/components/main-layout/DynamicBlobs';
+import axios from 'axios';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -22,13 +23,35 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate login process
-    setTimeout(() => {
+
+    try {
+      const response = await axios.post('/api/auth/login', JSON.stringify(formData), {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.data;
+
+      if (data.success) {
+        // 儲存 token 和用戶資料
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.user));
+
+        setIsLoading(false);
+
+        window.location.href = '/chat'
+      } else {
+        alert(data.message);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error logging in:', error);
       setIsLoading(false);
-      console.log('Login attempt:', formData);
-    }, 1500);
+    }
+    
   };
+
 
   return (
     <div className={styles.container}>

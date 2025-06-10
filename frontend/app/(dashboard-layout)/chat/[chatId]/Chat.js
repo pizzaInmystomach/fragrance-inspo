@@ -37,14 +37,43 @@ const SAMPLE_FRAGRANCES = [
 }
 ];
 
+// Typewriter Message Component
+const TypewriterMessage = ({ message, isComplete, onComplete }) => {
+    const [displayedText, setDisplayedText] = useState('');
+    const [currentIndex, setCurrentIndex] = useState(0);
+    
+    useEffect(() => {
+        if (isComplete) {
+            setDisplayedText(message.content || message.text);
+            return;
+        }
+        
+        if (currentIndex < (message.content || message.text).length) {
+            const timer = setTimeout(() => {
+                setDisplayedText(prev => prev + (message.content || message.text)[currentIndex]);
+                setCurrentIndex(prev => prev + 1);
+            }, 30); // 調整打字速度，數字越小越快
+            
+            return () => clearTimeout(timer);
+        } else if (onComplete) {
+            onComplete();
+        }
+    }, [currentIndex, message, isComplete, onComplete]);
+    
+    return <span>{displayedText}</span>;
+};
+
 export default function Chat() {
     const [recommendedFragrances, setRecommendedFragrances] = useState([]);
     const [messages, setMessages] = useState([]);
     const [step, setStep] = useState(STEP.NAME);
+    const [typingMessageIndex, setTypingMessageIndex] = useState(-1);
+    const [isInputDisabled, setIsInputDisabled] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const chatID = pathname.split('/').slice(-1)[0];
-    const userID = '684713347dc983cd4a0ccddd'
+    const userID = localStorage.getItem('userID');
+    // const userID = process.env.NEXT_PUBLIC_USER_ID;
 
     const handleGetMessages = async () => {
         try {
@@ -83,11 +112,29 @@ export default function Chat() {
     
   
     const appendBotMessage = (text) => {
-      setMessages(prev => [...prev, { sender: 'bot', text }]);
+        const newMessage = { sender: 'bot', text, isTyping: true };
+        setMessages(prev => {
+            const newMessages = [...prev, newMessage];
+            setTypingMessageIndex(newMessages.length - 1);
+            setIsInputDisabled(true);
+            return newMessages;
+        });
     };
   
     const appendUserMessage = (text) => {
       setMessages(prev => [...prev, { sender: 'user', text }]);
+    };
+
+    const handleTypingComplete = () => {
+        setTypingMessageIndex(-1);
+        setIsInputDisabled(false);
+        setMessages(prev => 
+            prev.map((msg, index) => 
+                index === prev.length - 1 && msg.sender === 'bot' 
+                    ? { ...msg, isTyping: false } 
+                    : msg
+            )
+        );
     };
     
     const handleNameSubmit = async (name) => {
@@ -139,9 +186,9 @@ export default function Chat() {
                 // const { character, message: botMessage, recommendations } = res.data;
 
                 // // 顯示 AI 回覆訊息
-                // if (botMessage) {
-                //     appendBotMessage(botMessage);
-                // }
+                if (data.result.botReply) {
+                    appendBotMessage(data.result.botReply);
+                }
 
                 // // 顯示個性分析文字（如果有）
                 // if (character?.analysis) {
@@ -150,13 +197,22 @@ export default function Chat() {
 
                 // 推薦香水
                 // setRecommendedFragrances(recommendations ?? []);
+                // 立即顯示 bot 回覆
+                // if (result.botReply) {
+                // displayMessage(result.botReply, 'bot');
+                // }
+                
+                // // 如果有推薦資料也一併處理
+                // if (result.recommendations && result.recommendations.length > 0) {
+                // displayRecommendations(result.recommendations);
+                // }
                 setRecommendedFragrances(SAMPLE_FRAGRANCES ?? []);
             } else {
                 throw new Error(`API error ${res.status}`);
             }
         } catch (err) {
             console.error(err);
-            appendBotMessage('Sorry, something went wrong.');
+            // appendBotMessage('Sorry, something went wrong.');
             setRecommendedFragrances(SAMPLE_FRAGRANCES);
         }
     };
@@ -165,12 +221,28 @@ export default function Chat() {
     return (
         <div className={styles.chatContent}>
             <div className={styles.messageBubbleContainer}>
-                {messages.map((msg, idx) => (
+                {/* {messages.map((msg, idx) => (
                     <div
                         key={idx}
                         className={`${styles.messageBubble} ${msg.sender === 'bot' ? styles.botBubble : styles.userBubble}`}
                     >
                         {msg.content || msg.text}
+                    </div>
+                ))} */}
+                {messages.map((msg, idx) => (
+                    <div
+                        key={idx}
+                        className={`${styles.messageBubble} ${msg.sender === 'bot' ? styles.botBubble : styles.userBubble}`}
+                    >
+                        {msg.sender === 'bot' && msg.isTyping ? (
+                            <TypewriterMessage 
+                                message={msg}
+                                isComplete={typingMessageIndex !== idx}
+                                onComplete={typingMessageIndex === idx ? handleTypingComplete : undefined}
+                            />
+                        ) : (
+                            msg.content || msg.text
+                        )}
                     </div>
                 ))}
             </div>

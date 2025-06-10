@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import styles from './DynamicBlobs.module.css';
 
 
 export default function DynamicBlobsBackground({ children, className = "" }) {
@@ -31,12 +32,12 @@ export default function DynamicBlobsBackground({ children, className = "" }) {
   ];
 
   return (
-    <div className={`blobs-container ${className}`}>
-      <div className="blobs-background">
+    <div className={`${styles.blobsContainer} ${className}`}>
+      <div className={styles.blobsBackground}>
         {blobs.map((blob) => (
           <div
             key={blob.id}
-            className="blob"
+            className={styles.blob}
             style={{
               '--start-x': `${blob.x}%`,
               '--start-y': `${blob.y}%`,
@@ -56,66 +57,9 @@ export default function DynamicBlobsBackground({ children, className = "" }) {
         ))}
       </div>
       
-      <div className="content-wrapper">
+      <div className={styles.contentWrapper}>
         {children}
       </div>
-
-      <style jsx>{`
-        .blobs-container {
-          position: relative;
-        }
-
-        .blobs-background {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          pointer-events: none;
-          z-index: 0;
-          overflow: hidden;
-        }
-
-        .blob {
-          position: absolute;
-          left: var(--start-x);
-          top: var(--start-y);
-          width: var(--size);
-          height: var(--size);
-          background: var(--background);
-          border-radius: var(--border-radius);
-          filter: blur(var(--blur));
-          opacity: var(--opacity);
-          animation: blobMovement var(--duration) ease-in-out infinite var(--delay);
-          will-change: transform;
-        }
-
-        .content-wrapper {
-          position: relative;
-          z-index: 1;
-        }
-
-        @keyframes blobMovement {
-          0% {
-            transform: translate(0, 0) scale(var(--scale)) rotate(0deg);
-          }
-          25% {
-            transform: translate(calc(var(--move-x) * 0.3), calc(var(--move-y) * 0.5)) 
-                      scale(calc(var(--scale) * 1.1)) rotate(calc(var(--rotate) * 0.25));
-          }
-          50% {
-            transform: translate(var(--move-x), var(--move-y)) 
-                      scale(calc(var(--scale) * 0.9)) rotate(calc(var(--rotate) * 0.5));
-          }
-          75% {
-            transform: translate(calc(var(--move-x) * 0.7), calc(var(--move-y) * 0.3)) 
-                      scale(calc(var(--scale) * 1.05)) rotate(calc(var(--rotate) * 0.75));
-          }
-          100% {
-            transform: translate(0, 0) scale(var(--scale)) rotate(var(--rotate));
-          }
-        }
-      `}</style>
     </div>
   );
 }
