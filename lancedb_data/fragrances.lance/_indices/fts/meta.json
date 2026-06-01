@@ -1,0 +1,100 @@
+{
+  "index_settings": {
+    "docstore_compression": "lz4",
+    "docstore_blocksize": 16384
+  },
+  "segments": [
+    {
+      "segment_id": "b1c2128d-71ec-432c-bf75-a00aedeeb763",
+      "max_doc": 4264,
+      "deletes": null
+    },
+    {
+      "segment_id": "2c541790-56cb-4c4b-9756-4d9b039f66a8",
+      "max_doc": 4215,
+      "deletes": null
+    },
+    {
+      "segment_id": "aa9a74e0-ee91-416b-a9f8-361030e2b43d",
+      "max_doc": 3778,
+      "deletes": null
+    },
+    {
+      "segment_id": "d5f72889-5a19-4550-82e0-9f7e903091b6",
+      "max_doc": 3436,
+      "deletes": null
+    },
+    {
+      "segment_id": "e3ce10bb-92b2-49bd-8444-62398a454ae9",
+      "max_doc": 2805,
+      "deletes": null
+    },
+    {
+      "segment_id": "b6614ff0-6e8f-4d71-a081-5fca1eada448",
+      "max_doc": 2291,
+      "deletes": null
+    },
+    {
+      "segment_id": "664002f9-9d91-40b6-a019-e302b65e9346",
+      "max_doc": 1656,
+      "deletes": null
+    },
+    {
+      "segment_id": "63504237-c2a6-439a-a191-7a1102a5f575",
+      "max_doc": 1618,
+      "deletes": null
+    }
+  ],
+  "schema": [
+    {
+      "name": "doc_id",
+      "type": "i64",
+      "options": {
+        "indexed": false,
+        "fieldnorms": false,
+        "fast": false,
+        "stored": true
+      }
+    },
+    {
+      "name": "brand",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "position",
+          "fieldnorms": true,
+          "tokenizer": "default"
+        },
+        "stored": true,
+        "fast": false
+      }
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "position",
+          "fieldnorms": true,
+          "tokenizer": "default"
+        },
+        "stored": true,
+        "fast": false
+      }
+    },
+    {
+      "name": "bm25_text",
+      "type": "text",
+      "options": {
+        "indexing": {
+          "record": "position",
+          "fieldnorms": true,
+          "tokenizer": "default"
+        },
+        "stored": true,
+        "fast": false
+      }
+    }
+  ],
+  "opstamp": 24071
+}
