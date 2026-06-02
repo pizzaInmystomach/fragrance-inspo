@@ -25,6 +25,7 @@ MANIFEST
 venv/
 env/
 ENV/
+.venv/
 
 # Logs
 logs/
@@ -60,3 +61,17 @@ yarn.lock
 
 # Distribution
 dist/
+
+# Next
+.next/
+
+frontend/node_modules/
+frontend/.next/
+# lancedb_data/
+.tmp_patch.sh
+
+# optional additional build artifacts
+frontend/out/
+frontend/build/
+frontend/.vercel/
+coverage/

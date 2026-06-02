@@ -1,4 +1,5 @@
 import inspect
+import re
 import lancedb
 from typing import List, Dict, Any
 
@@ -12,6 +13,11 @@ class HybridSearchEngine:
         # 檢查資料表是否已存在
         if self.table_name in self.db.table_names():
             self.table = self.db.open_table(self.table_name)
+
+    @staticmethod
+    def sanitize_fts_text(text: str) -> str:
+        cleaned = re.sub(r"[\"'’‘“”–—\\/:@#^&*()\[\]{}<>!?|~$%+=,.]+", " ", text)
+        return re.sub(r"\s+", " ", cleaned).strip()
 
     def create_hybrid_indices(self):
         """
@@ -149,14 +155,15 @@ class HybridSearchEngine:
             raise ValueError("資料表未初始化。")
 
         # 軌道一：密集向量檢索 (HNSW)
-        vector_res = self.table.search(query_vector, column="embedding").limit(limit * 2).to_list()
+        vector_res = self.table.search(query_vector, vector_column_name="embedding").limit(limit * 2).to_list()
 
         # 軌道二：稀疏向量檢索 (BM25 全文檢索)
         # 只搜尋實際存在於 table schema 的欄位
         schema_names = getattr(self.table.schema, "names", []) or []
         fts_cols = [c for c in ["brand", "name", "bm25_text"] if c in schema_names]
         if fts_cols:
-            fts_res = self.table.search(query_text, columns=fts_cols).limit(limit * 2).to_list()
+            safe_query = self.sanitize_fts_text(query_text)
+            fts_res = self.table.search(safe_query, fts_columns=fts_cols).limit(limit * 2).to_list()
         else:
             fts_res = []
 

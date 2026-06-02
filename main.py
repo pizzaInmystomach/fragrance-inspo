@@ -1,522 +1,208 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-import uvicorn
+import os
+import re
+import json
+import asyncio
 import logging
+from time import perf_counter_ns
+import ollama
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from typing import List
+from app.search_engine import HybridSearchEngine
 
-from app.ai.analyzer import CharacterAnalyzer
-from app.data_handler import DataHandler
+app = FastAPI(title="Local Fragrance Inspo Hybrid RAG API")
 
-# 設定日誌
+# 讀取環境變數，若不存在則預設連線本地端 (適用於非 Docker 環境測試)
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+ollama_client = ollama.Client(host=OLLAMA_HOST)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 初始化應用
-app = FastAPI(
-    title="香氛靈感 API", 
-    description="基於角色分析的香水推薦API",
-    version="2.0.0"
-)
+# 初始化本地混合檢索引擎
+try:
+    engine = HybridSearchEngine()
+except Exception as e:
+    print(f"[警告] 檢索引擎初始化失敗，請確認階段三是否已成功生成資料庫：{e}")
+    engine = None
 
-# 設定CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 在生產環境中應該設定具體的域名
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 定義 Pydantic 請求與回應規格
+class RecommendRequest(BaseModel):
+    user_prompt: str = Field(..., description="使用者的情境或香調期望描述")
 
-# 全局變數用於服務初始化
-analyzer = None
-data_handler = None
+class RecommendationItem(BaseModel):
+    id: str
+    name: str
+    brand: str
+    reason: str
 
-# 定義資料模型
-class RecommendationRequest(BaseModel):
-    character_name: str
-    source_type: Optional[str] = ""
+class LatencyMetrics(BaseModel):
+    embedding_latency_ms: float = Field(..., description="向量化延遲 (ms)")
+    retrieval_latency_ms: float = Field(..., description="檢索與 RRF 融合延遲 (ms)")
+    llm_generation_latency_ms: float = Field(..., description="LLM 文本生成延遲 (ms)")
+    end_to_end_latency_ms: float = Field(..., description="總端到端延遲 (ms)")
+    generation_throughput_tokens_sec: float = Field(..., description="詞生成速率 (Tokens/sec)")
 
-# 新增：智能輸入解析請求模型
-class SmartInputRequest(BaseModel):
-    user_input: str
-    num_recommendations: Optional[int] = 3
+class RecommendResponse(BaseModel):
+    recommendations: List[RecommendationItem]
+    metrics: LatencyMetrics
 
-# 新增：輸入解析回應模型
-class InputParsingResponse(BaseModel):
-    status: str  # success, need_clarification, invalid
-    character_name: Optional[str] = None
-    source: Optional[str] = None
-    intent: str
-    message: str
+class LLMRecommendationPayload(BaseModel):
+    recommendations: List[RecommendationItem]
 
-class HealthResponse(BaseModel):
-    status: str
-    message: str
-    database_status: str
-    total_fragrances: int
+# 非同步包裝函數：將阻礙事件循環的同步 LanceDB 查詢放到獨立線程執行
+def sanitize_fts_text(text: str) -> str:
+    # Tantivy query parser 不接受某些特殊字元，先以空白替換這些符號
+    cleaned = re.sub(r'["\'’‘“”–—\\/:@#^&*()\[\]{}<>!?|~$%+=,.]+', ' ', text)
+    return re.sub(r"\s+", " ", cleaned).strip()
 
-# 啟動事件
-@app.on_event("startup")
-async def startup_event():
-    """應用啟動時初始化服務"""
-    global analyzer, data_handler
-    
-    try:
-        logger.info("正在初始化服務...")
-        
-        # 初始化資料處理器
-        data_handler = DataHandler()
-        test_result = data_handler.test_connection()
-        
-        if not test_result["success"]:
-            logger.error(f"資料庫連線失敗: {test_result['error']}")
-            raise Exception(f"資料庫連線失敗: {test_result['error']}")
-        
-        logger.info(f"資料庫連線成功，共有 {test_result['total_count']} 筆香水資料")
-        
-        # 初始化分析器
-        analyzer = CharacterAnalyzer()
-        logger.info("角色分析器初始化成功")
-        
-        logger.info("所有服務初始化完成")
-        
-    except Exception as e:
-        logger.error(f"服務初始化失敗: {str(e)}")
-        raise e
-
-# 關閉事件
-@app.on_event("shutdown")  
-async def shutdown_event():
-    """應用關閉時清理資源"""
-    global data_handler
-    
-    try:
-        if data_handler:
-            data_handler.close_connection()
-            logger.info("資料庫連線已關閉")
-    except Exception as e:
-        logger.error(f"關閉連線時發生錯誤: {str(e)}")
-
-# API路由
-@app.get("/")
-def read_root():
-    """根路徑"""
-    return JSONResponse(
-        content={"message": "歡迎使用香氛靈感 API v2.0 - 現已支援智能輸入解析！"}, 
-        media_type="application/json; charset=utf-8"
+async def async_vector_search(table, vector, limit):
+    return await asyncio.to_thread(
+        lambda: table.search(vector, vector_column_name="embedding").limit(limit).to_list()
     )
 
-@app.get("/health", response_model=HealthResponse)
-def health_check():
-    """健康檢查端點"""
-    try:
-        if not data_handler:
-            return HealthResponse(
-                status="error",
-                message="資料處理器未初始化",
-                database_status="disconnected",
-                total_fragrances=0
-            )
-        
-        test_result = data_handler.test_connection()
-        
-        return HealthResponse(
-            status="healthy" if test_result["success"] else "unhealthy",
-            message="服務運行正常" if test_result["success"] else "資料庫連線異常",
-            database_status="connected" if test_result["success"] else "disconnected",
-            total_fragrances=test_result.get("total_count", 0)
-        )
-        
-    except Exception as e:
-        return HealthResponse(
-            status="error",
-            message=f"健康檢查失敗: {str(e)}",
-            database_status="unknown",
-            total_fragrances=0
-        )
-
-# 新增：智能輸入解析端點
-@app.post("/api/parse-input", response_model=InputParsingResponse)
-def parse_user_input(request: SmartInputRequest):
-    """
-    解析用戶的自然語言輸入
-    支持各種表達方式：
-    - "I want to smell like Harry Potter"
-    - "Hermione Granger"
-    - "What fragrance would Daisy wear?"
-    """
-    try:
-        # 檢查服務是否已初始化
-        if not analyzer:
-            raise HTTPException(
-                status_code=503, 
-                detail="服務尚未初始化完成，請稍後再試"
-            )
-        
-        logger.info(f"解析用戶輸入: {request.user_input}")
-        
-        result = analyzer.parse_user_input(request.user_input.strip())
-        
-        if not result:
-            return InputParsingResponse(
-                status="invalid",
-                character_name=None,
-                source=None,
-                intent="Parse failed",
-                message="I couldn't understand your request. Please tell me which character you'd like to match!"
-            )
-        
-        return InputParsingResponse(
-            status=result.get("status", "invalid"),
-            character_name=result.get("character_name"),
-            source=result.get("source"),
-            intent=result.get("intent", ""),
-            message=result.get("message", "")
-        )
-        
-    except Exception as e:
-        logger.error(f"輸入解析錯誤: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Input parsing failed: {str(e)}")
-
-# 新增：智能香水推薦端點（完整流程）
-@app.post("/api/recommend-smart")
-def get_smart_recommendations(request: SmartInputRequest):
-    """
-    智能香水推薦 - 從自然語言輸入開始到完整推薦
-    這是主要的端點，支持用戶直接輸入自然語言
-    """
-    try:
-        # 檢查服務是否已初始化
-        if not analyzer or not data_handler:
-            raise HTTPException(
-                status_code=503, 
-                detail="服務尚未初始化完成，請稍後再試"
-            )
-        
-        logger.info(f"開始智能推薦流程，用戶輸入: {request.user_input}")
-        
-        # 第1步：解析用戶輸入
-        parse_result = analyzer.parse_user_input(request.user_input.strip())
-        
-        if not parse_result:
-            return JSONResponse(
-                content={
-                    "success": False,
-                    "character_name": None,
-                    "character_analysis": None,
-                    "recommendations": [],
-                    "message": "I couldn't understand your request. Please tell me which character you'd like to match!",
-                    "error": "Input parsing failed"
-                },
-                media_type="application/json; charset=utf-8"
-            )
-        
-        # 如果需要澄清或輸入無效，返回相應訊息
-        if parse_result.get("status") != "success":
-            return JSONResponse(
-                content={
-                    "success": False,
-                    "character_name": parse_result.get("character_name"),
-                    "character_analysis": None,
-                    "recommendations": [],
-                    "message": parse_result.get("message", "Please provide more information."),
-                    "error": None
-                },
-                media_type="application/json; charset=utf-8"
-            )
-        
-        character_name = parse_result.get("character_name")
-        source = parse_result.get("source", "")
-        
-        logger.info(f"成功識別角色: {character_name} (來源: {source})")
-        
-        # 第2步：分析角色
-        character_analysis = analyzer.analyze_character(character_name, source)
-        
-        # 第3步：獲取香水資料
-        fragrances = data_handler.get_all_fragrances(limit=20)  # 限制數量以提高速度
-        
-        if not fragrances:
-            return JSONResponse(
-                content={
-                    "success": False,
-                    "character_name": character_name,
-                    "character_analysis": character_analysis,
-                    "recommendations": [],
-                    "message": "No fragrances found in database.",
-                    "error": "Empty database"
-                },
-                media_type="application/json; charset=utf-8"
-            )
-        
-        logger.info(f"獲取到 {len(fragrances)} 個香水進行匹配")
-        
-        # 第4步：匹配香水
-        match_result = analyzer.match_fragrances(
-            character_analysis, 
-            fragrances, 
-            request.num_recommendations
-        )
-        
-        recommendations = []
-        if match_result and match_result.get("recommendations"):
-            for rec in match_result["recommendations"]:
-                fragrance = rec["fragrance"]
-                description = analyzer.generate_description(fragrance)
-                
-                recommendations.append({
-                    "rank": rec["rank"],
-                    "fragrance": {
-                        "id": fragrance.get("id"),
-                        "name": fragrance.get("Name"),
-                        "brand": fragrance.get("Brand"),
-                        "accords": fragrance.get("Accords", []),
-                        "top_notes": fragrance.get("top_notes", []),
-                        "heart_notes": fragrance.get("heart_notes", []),
-                        "base_notes": fragrance.get("base_notes", []),
-                        "additional_traits": fragrance.get("additional_traits", []),
-                        "personality_match": fragrance.get("personality_match", []),
-                        "mood_description": fragrance.get("mood_description", ""),
-                        "season_suitability": fragrance.get("season_suitability", []),
-                        "time_of_day": fragrance.get("time_of_day", [])
-                    },
-                    "rationale": rec["rationale"],
-                    "description": description,
-                    "match_score": rec.get("match_score", 0)
-                })
-        
-        success_message = f"Found {len(recommendations)} perfect fragrance matches for {character_name}!"
-        
-        result = {
-            "success": True,
-            "character_name": character_name,
-            "character_analysis": character_analysis,
-            "recommendations": recommendations,
-            "message": success_message,
-            "error": None
-        }
-        
-        return JSONResponse(content=result, media_type="application/json; charset=utf-8")
-        
-    except Exception as e:
-        logger.error(f"智能推薦錯誤: {str(e)}")
-        return JSONResponse(
-            content={
-                "success": False,
-                "character_name": None,
-                "character_analysis": None,
-                "recommendations": [],
-                "message": "An error occurred while processing your request.",
-                "error": str(e)
-            },
-            media_type="application/json; charset=utf-8"
-        )
-
-@app.post("/api/recommendations")
-def get_recommendations(request: RecommendationRequest):
-    """獲取角色香水推薦（傳統方式）"""
-    try:
-        # 檢查服務是否已初始化
-        if not analyzer or not data_handler:
-            raise HTTPException(
-                status_code=503, 
-                detail="服務尚未初始化完成，請稍後再試"
-            )
-        
-        logger.info(f"開始處理推薦請求: {request.character_name}")
-        
-        # 1. 分析角色 (使用同步版本)
-        character_analysis = analyzer.analyze_character(
-            request.character_name, 
-            request.source_type
-        )
-        logger.info(f"角色分析完成: {request.character_name}")
-        
-        # 2. 獲取香水資料
-        fragrances = data_handler.get_all_fragrances()
-        if not fragrances:
-            raise HTTPException(status_code=500, detail="無法獲取香水資料")
-        
-        logger.info(f"已獲取 {len(fragrances)} 筆香水資料")
-        
-        # 3. 匹配香水 (使用同步版本，取得3個推薦)
-        match_result = analyzer.match_fragrances(
-            character_analysis,
-            fragrances,
-            num_recommendations=3
-        )
-        
-        if not match_result or not match_result.get("recommendations"):
-            raise HTTPException(status_code=404, detail="找不到合適的香水推薦")
-        
-        recommendations = match_result["recommendations"]
-        logger.info(f"香水匹配完成，共 {len(recommendations)} 個推薦")
-        
-        # 4. 為每個推薦的香水生成描述
-        enhanced_recommendations = []
-        for rec in recommendations:
-            fragrance = rec["fragrance"]
-            description = analyzer.generate_description(fragrance)
-            
-            enhanced_rec = {
-                "rank": rec["rank"],
-                "fragrance": {
-                    "id": fragrance.get("id"),
-                    "name": fragrance.get("Name"),
-                    "brand": fragrance.get("Brand"),
-                    "accords": fragrance.get("Accords", []),
-                    "top_notes": fragrance.get("top_notes", []),
-                    "heart_notes": fragrance.get("heart_notes", []),
-                    "base_notes": fragrance.get("base_notes", []),
-                    "additional_traits": fragrance.get("additional_traits", []),
-                    "personality_match": fragrance.get("personality_match", []),
-                    "mood_description": fragrance.get("mood_description", ""),
-                    "season_suitability": fragrance.get("season_suitability", []),
-                    "time_of_day": fragrance.get("time_of_day", [])
-                },
-                "rationale": rec["rationale"],
-                "description": description,
-                "match_score": rec.get("match_score", 0)
-            }
-            enhanced_recommendations.append(enhanced_rec)
-        
-        logger.info("所有香水描述生成完成")
-        
-        # 5. 組合推薦結果
-        result = {
-            "character": {
-                "name": request.character_name,
-                "source": request.source_type,
-                **character_analysis
-            },
-            "recommendations": enhanced_recommendations,
-            "total_recommendations": len(enhanced_recommendations),
-            "timestamp": None  # 可以加入時間戳記
-        }
-        
-        logger.info(f"推薦請求處理完成: {request.character_name}")
-        return JSONResponse(content=result, media_type="application/json; charset=utf-8")
-    
-    except HTTPException:
-        # 重新拋出 HTTPException
-        raise
-    except Exception as e:
-        logger.error(f"處理推薦請求時出錯: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"處理推薦請求時出錯: {str(e)}")
-
-# 新增：獲取熱門角色列表
-@app.get("/api/characters/popular")
-def get_popular_characters():
-    """獲取熱門角色列表，幫助用戶選擇"""
-    popular_characters = [
-        {"name": "Harry Potter", "source": "Harry Potter", "description": "Brave, loyal, determined wizard"},
-        {"name": "Hermione Granger", "source": "Harry Potter", "description": "Intelligent, studious, resourceful witch"},
-        {"name": "Daisy Buchanan", "source": "The Great Gatsby", "description": "Elegant, sophisticated, mysterious socialite"},
-        {"name": "James Bond", "source": "James Bond", "description": "Sophisticated, confident, suave secret agent"},
-        {"name": "Audrey Hepburn", "source": "Classic Hollywood", "description": "Elegant, graceful, timeless icon"},
-        {"name": "Jay Gatsby", "source": "The Great Gatsby", "description": "Romantic, ambitious, mysterious millionaire"},
-    ]
-    
-    return JSONResponse(
-        content={
-            "popular_characters": popular_characters,
-            "message": "You can ask for recommendations like: 'I want to smell like Harry Potter' or just 'Hermione Granger'"
-        },
-        media_type="application/json; charset=utf-8"
+async def async_fts_search(table, text, limit):
+    safe_text = sanitize_fts_text(text)
+    return await asyncio.to_thread(
+        lambda: table.search(safe_text, fts_columns=["brand", "name", "bm25_text"]).limit(limit).to_list()
     )
 
-@app.get("/api/fragrances")
-def get_all_fragrances(limit: Optional[int] = None):
-    """獲取所有香水資料"""
+@app.post("/api/recommend", response_model=RecommendResponse)
+async def recommend_fragrances(request: RecommendRequest):
+    if engine is None or engine.table is None:
+        raise HTTPException(status_code=500, detail="本地檢索資料庫未就緒，請先執行階段三。")
+    
+    # 啟動總端到端計時
+    start_e2e = perf_counter_ns()
+    
     try:
-        if not data_handler:
-            raise HTTPException(status_code=503, detail="資料處理器尚未初始化")
-        
-        fragrances = data_handler.get_all_fragrances(limit=limit)
-        
-        # 格式化回傳資料
-        formatted_fragrances = []
-        for fragrance in fragrances:
-            notes_obj = fragrance.get('Notes', {})
-            formatted_fragrance = {
-                "id": str(fragrance.get('_id')),
-                "name": fragrance.get('Name', '').replace(',', '').strip(),
-                "brand": fragrance.get('Brand', '').replace(',', '').strip(),
-                "accords": fragrance.get('Accords', '').replace(',', ', ').strip().split(', ') if fragrance.get('Accords') else [],
-                "notes": {
-                    "top": notes_obj.get('Top Notes', '').replace(',', ', ').strip(),
-                    "heart": notes_obj.get('Heart Notes', '').replace(',', ', ').strip(),
-                    "base": notes_obj.get('Base Notes', '').replace(',', ', ').strip()
-                }
-            }
-            formatted_fragrances.append(formatted_fragrance)
-        
-        return JSONResponse(
-            content={
-                "total": len(formatted_fragrances),
-                "fragrances": formatted_fragrances
-            },
-            media_type="application/json; charset=utf-8"
+        # 1. 將使用者輸入轉為向量 (耗時約數十毫秒)
+        start_emb = perf_counter_ns()
+        emb_res = await asyncio.to_thread(
+            ollama_client.embed,
+            model="nomic-embed-text",
+            input=request.user_prompt
         )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"獲取香水資料時出錯: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"獲取香水資料時出錯: {str(e)}")
+        end_emb = perf_counter_ns()
+        embedding_latency = (end_emb - start_emb) / 1_000_000  # 轉為毫秒
+        query_vector = emb_res.get("embeddings", [[]])[0]
 
-@app.get("/api/fragrances/{fragrance_id}")
-def get_fragrance_by_id(fragrance_id: str):
-    """根據ID獲取特定香水資料"""
-    try:
-        if not data_handler:
-            raise HTTPException(status_code=503, detail="資料處理器尚未初始化")
+        if not query_vector:
+            raise HTTPException(status_code=500, detail="無法生成輸入文字的語意向量。")
+
+        # 2. 實作作業系統任務平行化：同步觸發雙軌檢索，由耗時最長者決定回傳時間
+        start_ret = perf_counter_ns()
+        limit = 5
+        task_vector = async_vector_search(engine.table, query_vector, limit * 2)
+        task_fts = async_fts_search(engine.table, request.user_prompt, limit * 2)
         
-        fragrance = data_handler.get_fragrance_by_id(fragrance_id)
-        
-        if not fragrance:
-            raise HTTPException(status_code=404, detail="找不到指定的香水")
-        
-        # 使用分析器增強資料
-        if analyzer:
-            enhanced_fragrance = analyzer.enhance_fragrance_data(fragrance)
-            return JSONResponse(
-                content=enhanced_fragrance,
-                media_type="application/json; charset=utf-8"
+        # 併發執行
+        vector_results, fts_results = await asyncio.gather(task_vector, task_fts)
+
+        # 3. 透過 RRF 演算法進行排序融合 (純數學運算，無 I/O 阻塞)
+        retrieved_docs = engine._rrf(vector_results, fts_results, k=60)[:limit]
+        end_ret = perf_counter_ns()
+        retrieval_latency = (end_ret - start_ret) / 1_000_000  # 轉為毫秒
+
+        if not retrieved_docs:
+            raise HTTPException(status_code=404, detail="找不到任何相關的香水資料。")
+
+        # 4. 拼接 Context 文本
+        context_list = []
+        for d in retrieved_docs:
+            description = d.get("description") or d.get("metadata", {}).get("description", "")
+            context_list.append(
+                f"ID: {d['id']} | Brand: {d['brand']} | Name: {d['name']} | Description: {description}"
             )
+        context_text = "\n---\n".join(context_list)
+
+        # 5. 建置 Prompt 並嚴格要求 Llama 3 遵循 JSON 結構
+        system_instruction = (
+            "你是一個專業的香水推薦專家。請根據提供給你的『候選香水上下文資料』，"
+            "從中篩選出最符合使用者期望的 3 款香水，並給出具體的推薦原因。\n"
+            "關鍵規則：\n"
+            "1. 只能從給定的上下文資料中進行選擇，不得虛構不存在的香水。\n"
+            "2. 必須嚴格回傳合法的 JSON 格式，其結構必須包含一個 'recommendations' 陣列，"
+            "陣列中的每個物件必須精確包含 'id', 'name', 'brand', 'reason' 四個鍵值。"
+        )
+
+        prompt = f"""
+使用者期望的情境或感覺："{request.user_prompt}"
+
+候選香水上下文資料：
+{context_text}
+
+請以規定的 JSON 格式回傳 3 款推薦香水。
+"""
+
+        # 6. 呼叫本地 Llama 3 生成推薦 (開啟 format='json' 啟用 JSON Mode)
+        start_llm = perf_counter_ns()
+        llm_response = await asyncio.to_thread(
+            ollama_client.chat,
+            model="llama3:8b",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ],
+            format="json"  # 強制 Ollama 底層約束 Token 輸出為 JSON
+        )
+        end_llm = perf_counter_ns()
+        llm_latency = (end_llm - start_llm) / 1_000_000  # 轉為毫秒
+
+        if isinstance(llm_response, dict):
+            logger.info("llm_response keys: %s", list(llm_response.keys()))
+            response_content = llm_response.get("message", {}).get("content")
+            eval_count = llm_response.get('eval_count', 0)  # 生成的 Token 數量
         else:
-            # 如果分析器未初始化，返回基本資料
-            notes_obj = fragrance.get('Notes', {})
-            basic_fragrance = {
-                "id": str(fragrance.get('_id')),
-                "name": fragrance.get('Name', '').replace(',', '').strip(),
-                "brand": fragrance.get('Brand', '').replace(',', '').strip(),
-                "accords": fragrance.get('Accords', '').replace(',', ', ').strip().split(', ') if fragrance.get('Accords') else [],
-                "notes": {
-                    "top": notes_obj.get('Top Notes', '').replace(',', ', ').strip(),
-                    "heart": notes_obj.get('Heart Notes', '').replace(',', ', ').strip(),
-                    "base": notes_obj.get('Base Notes', '').replace(',', ', ').strip()
-                }
-            }
-            return JSONResponse(
-                content=basic_fragrance,
-                media_type="application/json; charset=utf-8"
-            )
+            logger.info("llm_response type: %s", type(llm_response))
+            logger.debug("llm_response full content: %s", llm_response)
+            message_obj = getattr(llm_response, "message", None)
+            response_content = getattr(message_obj, "content", None)
+            eval_count = getattr(llm_response, 'eval_count', 0)
+            
+        # 計算詞生成速率 (Throughput) 與 總端到端延遲 (End-to-End Latency)
+        llm_seconds = llm_latency / 1000.0
+        generation_throughput = eval_count / llm_seconds if llm_seconds > 0 else 0.0
         
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"獲取香水資料時出錯: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"獲取香水資料時出錯: {str(e)}")
+        end_e2e = perf_counter_ns()
+        end_to_end_latency = (end_e2e - start_e2e) / 1_000_000
 
-# 僅在直接執行此檔案時啟動服務器
+        if not response_content or not isinstance(response_content, str):
+            logger.error("Invalid llm_response content: %s", llm_response)
+            raise HTTPException(status_code=502, detail="本地大模型回傳格式異常。")
+
+        # 7. 解析並透過 Pydantic 進行二次規格校驗
+        try:
+            response_data = json.loads(response_content)
+        except json.JSONDecodeError as e:
+            logger.error("JSON decode failed for llm_response content: %s, error: %s", response_content, e)
+            raise HTTPException(status_code=502, detail="本地大模型回傳的 JSON 格式損毀。")
+
+        try:
+            llm_payload = LLMRecommendationPayload(**response_data)
+        except Exception as e:
+            logger.error("LLM response validation failed: %s", e)
+            raise HTTPException(status_code=502, detail="本地大模型回傳的推薦格式不正確。")
+        
+        # 組裝最終回傳結構，附帶指標數據
+        metrics_data = LatencyMetrics(
+            embedding_latency_ms=round(embedding_latency, 2),
+            retrieval_latency_ms=round(retrieval_latency, 2),
+            llm_generation_latency_ms=round(llm_latency, 2),
+            end_to_end_latency_ms=round(end_to_end_latency, 2),
+            generation_throughput_tokens_sec=round(generation_throughput, 2)
+        )
+        
+        return RecommendResponse(
+            recommendations=llm_payload.recommendations,
+            metrics=metrics_data
+        )
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail="本地大模型回傳的 JSON 格式損毀。")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"執行期錯誤: {str(e)}")
+
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app", 
-        host="0.0.0.0", 
-        port=8000, 
-        reload=True,
-        log_level="info"
-    )
+    import uvicorn
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
