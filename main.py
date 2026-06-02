@@ -3,6 +3,7 @@ import re
 import json
 import asyncio
 import logging
+import time
 from time import perf_counter_ns
 import ollama
 from fastapi import FastAPI, HTTPException
@@ -67,7 +68,7 @@ async def async_fts_search(table, text, limit):
         lambda: table.search(safe_text, fts_columns=["brand", "name", "bm25_text"]).limit(limit).to_list()
     )
 
-@app.post("/api/recommend", response_model=RecommendResponse)
+@app.post("/api/recommend", response_model=List[RecommendationItem])
 async def recommend_fragrances(request: RecommendRequest):
     if engine is None or engine.table is None:
         raise HTTPException(status_code=500, detail="本地檢索資料庫未就緒，請先執行階段三。")
@@ -184,7 +185,7 @@ async def recommend_fragrances(request: RecommendRequest):
             logger.error("LLM response validation failed: %s", e)
             raise HTTPException(status_code=502, detail="本地大模型回傳的推薦格式不正確。")
         
-        # 組裝最終回傳結構，附帶指標數據
+        # 組裝 metrics 並在背景儲存至 .venv/fragrance_metrics.json
         metrics_data = LatencyMetrics(
             embedding_latency_ms=round(embedding_latency, 2),
             retrieval_latency_ms=round(retrieval_latency, 2),
@@ -192,16 +193,69 @@ async def recommend_fragrances(request: RecommendRequest):
             end_to_end_latency_ms=round(end_to_end_latency, 2),
             generation_throughput_tokens_sec=round(generation_throughput, 2)
         )
-        
-        return RecommendResponse(
-            recommendations=llm_payload.recommendations,
-            metrics=metrics_data
-        )
 
+        metrics_path = os.path.join(os.getcwd(), ".venv", "fragrance_metrics.json")
+
+        def _write_metrics(metrics: LatencyMetrics, prompt_text: str | None = None):
+            try:
+                if os.path.exists(metrics_path):
+                    with open(metrics_path, "r", encoding="utf-8") as fh:
+                        data = json.load(fh)
+                else:
+                    data = []
+            except Exception:
+                data = []
+
+            entry = {
+                "timestamp": time.time(),
+                "prompt": prompt_text,
+                "metrics": metrics.model_dump() if hasattr(metrics, "model_dump") else metrics.dict()
+            }
+            data.append(entry)
+            try:
+                os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+            except Exception:
+                pass
+            with open(metrics_path, "w", encoding="utf-8") as fh:
+                json.dump(data, fh, ensure_ascii=False, indent=2)
+
+        # 執行背景寫入（不 await）
+        try:
+            asyncio.create_task(asyncio.to_thread(_write_metrics, metrics_data, request.user_prompt))
+        except Exception:
+            logger.exception("Failed to schedule metrics write")
+
+        # 回傳僅包含推薦清單
+        return llm_payload.recommendations
     except json.JSONDecodeError:
         raise HTTPException(status_code=502, detail="本地大模型回傳的 JSON 格式損毀。")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"執行期錯誤: {str(e)}")
+
+
+@app.get("/metrics/latest")
+async def get_latest_metrics():
+    """回傳 .venv/fragrance_metrics.json 中最新的一筆 metrics。"""
+    metrics_path = os.path.join(os.getcwd(), ".venv", "fragrance_metrics.json")
+    if not os.path.exists(metrics_path):
+        raise HTTPException(status_code=404, detail="No metrics found")
+
+    try:
+        def _read():
+            with open(metrics_path, "r", encoding="utf-8") as fh:
+                arr = json.load(fh)
+            return arr[-1] if arr else None
+
+        latest = await asyncio.to_thread(_read)
+        if latest is None:
+            raise HTTPException(status_code=404, detail="No metrics entries")
+        return latest
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Metrics file corrupted")
+    except Exception as e:
+        logger.exception("Error reading metrics: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to read metrics")
+
 
 if __name__ == "__main__":
     import uvicorn
