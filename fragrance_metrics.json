@@ -1,0 +1,112 @@
+[
+  {
+    "timestamp": 1780843032.7069702,
+    "prompt": "I want a fresh citrus scent that feels like walking through an orange grove on a bright summer morning.",
+    "metrics": {
+      "embedding_latency_ms": 57.59,
+      "retrieval_latency_ms": 94.72,
+      "llm_generation_latency_ms": 13895.22,
+      "end_to_end_latency_ms": 14047.79,
+      "generation_throughput_tokens_sec": 14.18
+    }
+  },
+  {
+    "timestamp": 1780843055.611823,
+    "prompt": "Looking for a clean oceanic perfume with hints of sea salt and mint for hot beach days.",
+    "metrics": {
+      "embedding_latency_ms": 57.5,
+      "retrieval_latency_ms": 28.24,
+      "llm_generation_latency_ms": 14343.78,
+      "end_to_end_latency_ms": 14430.05,
+      "generation_throughput_tokens_sec": 13.94
+    }
+  },
+  {
+    "timestamp": 1780843078.47045,
+    "prompt": "A romantic floral fragrance dominated by white roses and jasmine with a soft powdery finish.",
+    "metrics": {
+      "embedding_latency_ms": 43.36,
+      "retrieval_latency_ms": 28.08,
+      "llm_generation_latency_ms": 13407.79,
+      "end_to_end_latency_ms": 13479.36,
+      "generation_throughput_tokens_sec": 13.87
+    }
+  },
+  {
+    "timestamp": 1780843101.6443892,
+    "prompt": "Searching for a sweet gourmand perfume that smells like vanilla beans cacao and warm caramel.",
+    "metrics": {
+      "embedding_latency_ms": 46.69,
+      "retrieval_latency_ms": 25.23,
+      "llm_generation_latency_ms": 14861.89,
+      "end_to_end_latency_ms": 14933.93,
+      "generation_throughput_tokens_sec": 13.12
+    }
+  },
+  {
+    "timestamp": 1780843136.5852668,
+    "prompt": "I need a green herbal scent with crushed mint leaves green tea and wet grass notes.",
+    "metrics": {
+      "embedding_latency_ms": 61.97,
+      "retrieval_latency_ms": 90.82,
+      "llm_generation_latency_ms": 15082.37,
+      "end_to_end_latency_ms": 15235.29,
+      "generation_throughput_tokens_sec": 14.26
+    }
+  },
+  {
+    "timestamp": 1780843161.1872718,
+    "prompt": "A warm oriental fragrance featuring spicy cinnamon amber and exotic incense for winter nights.",
+    "metrics": {
+      "embedding_latency_ms": 48.52,
+      "retrieval_latency_ms": 28.75,
+      "llm_generation_latency_ms": 15546.59,
+      "end_to_end_latency_ms": 15623.96,
+      "generation_throughput_tokens_sec": 14.28
+    }
+  },
+  {
+    "timestamp": 1780843194.4385622,
+    "prompt": "A dark mysterious perfume combining smoky tobacco black pepper and rich leather accents.",
+    "metrics": {
+      "embedding_latency_ms": 50.17,
+      "retrieval_latency_ms": 29.77,
+      "llm_generation_latency_ms": 15973.49,
+      "end_to_end_latency_ms": 16053.51,
+      "generation_throughput_tokens_sec": 14.59
+    }
+  },
+  {
+    "timestamp": 1780843220.534879,
+    "prompt": "A sweet fruity fragrance with ripe peaches juicy red berries and a touch of honey.",
+    "metrics": {
+      "embedding_latency_ms": 42.11,
+      "retrieval_latency_ms": 26.01,
+      "llm_generation_latency_ms": 17975.78,
+      "end_to_end_latency_ms": 18044.03,
+      "generation_throughput_tokens_sec": 13.74
+    }
+  },
+  {
+    "timestamp": 1780843251.142356,
+    "prompt": "Looking for a subtle skin scent with white musk soft cedarwood and a clean laundry feel.",
+    "metrics": {
+      "embedding_latency_ms": 54.93,
+      "retrieval_latency_ms": 24.34,
+      "llm_generation_latency_ms": 15798.17,
+      "end_to_end_latency_ms": 15877.58,
+      "generation_throughput_tokens_sec": 14.12
+    }
+  },
+  {
+    "timestamp": 1780843268.684453,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "metrics": {
+      "embedding_latency_ms": 46.0,
+      "retrieval_latency_ms": 25.24,
+      "llm_generation_latency_ms": 13960.65,
+      "end_to_end_latency_ms": 14031.99,
+      "generation_throughput_tokens_sec": 14.33
+    }
+  }
+]
