@@ -42,16 +42,21 @@ pip install -r requirements.txt
 
 3. 設定環境變數（可選，或直接修改 config.py）
 ```bash
-export MONGO_URI="mongodb://localhost:27017/"
+export MONGO_URI="mongodb://localhost:27017"
 export DB_NAME="fragrance_inspo"
+export COLLECTION_NAME="perfume"
 export OLLAMA_HOST="http://localhost:11434"
 export OLLAMA_MODEL="llama3"
 ```
 
-4. 啟動後端
+4. 匯入 CSV 資料到 MongoDB
 ```bash
-cd backend
-python app.py
+python scripts/import_fragrances_csv.py --file app/data/fra_cleaned.csv --drop
+```
+
+5. 啟動後端
+```bash
+python main.py
 ```
 
 現在後端應該已經在 http://localhost:5000 上運行。

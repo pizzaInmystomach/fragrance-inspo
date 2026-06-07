@@ -7,14 +7,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME", "fragrance")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME", "perfume")
+
+
+def _validate_uri(uri: str) -> bool:
+    if not uri:
+        raise ValueError("未設定 MONGO_URI。請檢查 .env 或系統環境變數。")
+    if "<" in uri or ">" in uri:
+        raise ValueError("MONGO_URI 含有佔位符 '<' 或 '>'，請移除並填入實際密碼。")
+    return True
 
 
 class DataHandler:
     """處理香水資料的類"""
 
-    def __init__(self, uri=MONGO_URI, db_name="fragrance", collection_name="perfume"):
+    def __init__(self, uri=MONGO_URI, db_name=DB_NAME, collection_name=COLLECTION_NAME):
         try:
-            self.client = MongoClient(uri)
+            _validate_uri(uri)
+            # 設定短的 serverSelectionTimeoutMS 以便於快速失敗並回報錯誤
+            self.client = MongoClient(uri, serverSelectionTimeoutMS=5000)
             self.db = self.client[db_name]
             self.collection = self.db[collection_name]
             print(f"成功連線到MongoDB: {db_name}.{collection_name}")

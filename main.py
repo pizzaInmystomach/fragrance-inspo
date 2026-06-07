@@ -51,6 +51,11 @@ class InputParsingResponse(BaseModel):
     intent: str
     message: str
 
+# 新增：通用香水推薦請求模型
+class FragranceRecommendRequest(BaseModel):
+    user_prompt: str
+    num_recommendations: Optional[int] = 3
+
 class HealthResponse(BaseModel):
     status: str
     message: str
