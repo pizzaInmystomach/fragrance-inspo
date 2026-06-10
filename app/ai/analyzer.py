@@ -5,7 +5,7 @@ from langchain.prompts import PromptTemplate
 from .llm_config import get_balanced_model, get_fast_model
 from .prompts import (
     INPUT_PARSING_PROMPT,
-    CHARACTER_PROMPT,
+    SCENE_PROMPT,
     MATCHING_PROMPT,
     DESCRIPTION_PROMPT,
     TRAIT_ENHANCEMENT_PROMPT,
@@ -13,7 +13,7 @@ from .prompts import (
 
 
 class CharacterAnalyzer:
-    """Character analyzer and fragrance matcher with intelligent input parsing"""
+    """Scene/environment analyzer and fragrance matcher with intelligent input parsing"""
 
     def __init__(self):
         self.llm = get_balanced_model()
@@ -23,8 +23,8 @@ class CharacterAnalyzer:
         self.input_parsing_prompt = PromptTemplate(
             template=INPUT_PARSING_PROMPT, input_variables=["user_input"]
         )
-        self.character_prompt = PromptTemplate(
-            template=CHARACTER_PROMPT, input_variables=["character_name", "source_type"]
+        self.scene_prompt = PromptTemplate(
+            template=SCENE_PROMPT, input_variables=["scene_prompt"]
         )
         self.matching_prompt = PromptTemplate(
             template=MATCHING_PROMPT,
@@ -57,12 +57,40 @@ class CharacterAnalyzer:
 
         # 使用新的 LCEL 語法建立鏈
         self.input_parsing_chain = self.input_parsing_prompt | self.fast_llm
-        self.character_chain = self.character_prompt | self.llm
+        self.scene_chain = self.scene_prompt | self.llm
         self.description_chain = self.description_prompt | self.llm
         self.trait_enhancement_chain = self.trait_enhancement_prompt | self.fast_llm
+        self.last_generation_tokens = 0
+        self.llm_unavailable = False
 
-    def _safe_llm_call(self, chain, inputs, retries=2, delay=1):
-        """安全的 LLM 調用，包含重試機制和錯誤處理"""
+    def reset_generation_metrics(self):
+        """Reset token counters before measuring a generation stage."""
+        self.last_generation_tokens = 0
+
+    def _extract_output_tokens(self, result):
+        """Best-effort extraction of output token count from LangChain/Groq responses."""
+        usage = getattr(result, "usage_metadata", None)
+        if isinstance(usage, dict):
+            output_tokens = usage.get("output_tokens")
+            if isinstance(output_tokens, int):
+                return output_tokens
+
+        metadata = getattr(result, "response_metadata", None)
+        if isinstance(metadata, dict):
+            token_usage = metadata.get("token_usage", {})
+            if isinstance(token_usage, dict):
+                for key in ("completion_tokens", "output_tokens", "generated_tokens"):
+                    output_tokens = token_usage.get(key)
+                    if isinstance(output_tokens, int):
+                        return output_tokens
+
+        return 0
+
+    def _safe_llm_call_with_usage(self, chain, inputs, retries=2, delay=1):
+        """安全的 LLM 調用，並記錄 output token 數。"""
+        if self.llm_unavailable:
+            return {"content": None, "output_tokens": 0}
+
         for attempt in range(retries + 1):
             try:
                 if attempt > 0:
@@ -71,10 +99,21 @@ class CharacterAnalyzer:
 
                 result = chain.invoke(inputs)
                 content = result.content if hasattr(result, "content") else str(result)
-                return content.strip()
+                output_tokens = self._extract_output_tokens(result)
+                self.last_generation_tokens += output_tokens
+
+                return {
+                    "content": content.strip(),
+                    "output_tokens": output_tokens,
+                }
 
             except Exception as e:
                 error_msg = str(e).lower()
+                if "model_decommissioned" in error_msg or "decommissioned" in error_msg:
+                    print("LLM 模型已不可用，改用本地 fallback。")
+                    self.llm_unavailable = True
+                    return {"content": None, "output_tokens": 0}
+
                 if "429" in error_msg or "rate limit" in error_msg:
                     print(f"API 限制錯誤，等待 {delay * (attempt + 1)} 秒...")
                     if attempt < retries:
@@ -82,8 +121,21 @@ class CharacterAnalyzer:
                         continue
                 print(f"LLM 調用失敗 (嘗試 {attempt + 1}): {str(e)}")
                 if attempt == retries:
-                    return None
-        return None
+                    return {"content": None, "output_tokens": 0}
+        return {"content": None, "output_tokens": 0}
+
+    def _clean_text(self, value):
+        """Normalize string/list values from MongoDB fragrance documents."""
+        if isinstance(value, list):
+            return ", ".join(str(item).strip() for item in value if str(item).strip())
+        if value is None:
+            return ""
+        return str(value).replace(",", ", ").strip()
+
+    def _safe_llm_call(self, chain, inputs, retries=2, delay=1):
+        """安全的 LLM 調用，包含重試機制和錯誤處理"""
+        result = self._safe_llm_call_with_usage(chain, inputs, retries, delay)
+        return result["content"]
 
     def _extract_json_from_text(self, text):
         """從文本中提取 JSON - 強化版本（修復引號問題）"""
@@ -213,14 +265,14 @@ class CharacterAnalyzer:
         return None
 
     def parse_user_input(self, user_input):
-        """解析用戶輸入，提取角色信息"""
+        """解析用戶輸入，提取情境、環境、氣味需求"""
         try:
-            print(f"🔍 解析用戶輸入: '{user_input}'")
+            print(f"🔍 解析情境輸入: '{user_input}'")
 
-            # 首先嘗試基本的關鍵詞檢測（快速路徑）
-            quick_parse = self._quick_character_detection(user_input)
+            # 首先嘗試基本的情境/氣味關鍵詞檢測（快速路徑）
+            quick_parse = self._quick_scene_detection(user_input)
             if quick_parse:
-                print(f"✅ 快速檢測成功: {quick_parse['character_name']}")
+                print(f"✅ 快速檢測成功: {quick_parse['scene_prompt']}")
                 return quick_parse
 
             # 使用 LLM 進行智能解析
@@ -244,47 +296,56 @@ class CharacterAnalyzer:
             print(f"❌ 輸入解析錯誤: {str(e)}")
             return self._fallback_input_parsing(user_input)
 
-    def _quick_character_detection(self, user_input):
-        """快速檢測常見角色名稱"""
+    def _quick_scene_detection(self, user_input):
+        """快速檢測常見情境與氣味線索"""
         input_lower = user_input.lower()
 
-        # 常見角色映射
-        character_map = {
-            # Harry Potter 系列
-            "harry potter": {"name": "Harry Potter", "source": "Harry Potter"},
-            "hermione granger": {"name": "Hermione Granger", "source": "Harry Potter"},
-            "hermione": {"name": "Hermione Granger", "source": "Harry Potter"},
-            "ron weasley": {"name": "Ron Weasley", "source": "Harry Potter"},
-            "dumbledore": {"name": "Albus Dumbledore", "source": "Harry Potter"},
-            "snape": {"name": "Severus Snape", "source": "Harry Potter"},
-            # 經典文學
-            "daisy buchanan": {"name": "Daisy Buchanan", "source": "The Great Gatsby"},
-            "gatsby": {"name": "Jay Gatsby", "source": "The Great Gatsby"},
-            "elizabeth bennet": {
-                "name": "Elizabeth Bennet",
-                "source": "Pride and Prejudice",
-            },
-            "mr darcy": {"name": "Mr. Darcy", "source": "Pride and Prejudice"},
-            # 電影角色
-            "audrey hepburn": {"name": "Audrey Hepburn", "source": "Classic Hollywood"},
-            "marilyn monroe": {"name": "Marilyn Monroe", "source": "Classic Hollywood"},
-            "james bond": {"name": "James Bond", "source": "James Bond"},
-            # 中文角色
-            "妙麗": {"name": "Hermione Granger", "source": "Harry Potter"},
-            "哈利波特": {"name": "Harry Potter", "source": "Harry Potter"},
-            "哈利": {"name": "Harry Potter", "source": "Harry Potter"},
-        }
+        scene_keywords = [
+            "rain",
+            "rainy",
+            "library",
+            "book",
+            "pages",
+            "old book",
+            "earth",
+            "earthy",
+            "wood",
+            "woody",
+            "forest",
+            "cabin",
+            "winter",
+            "summer",
+            "beach",
+            "garden",
+            "coffee",
+            "tea",
+            "smoky",
+            "incense",
+            "clean",
+            "fresh",
+            "cozy",
+            "romantic",
+            "office",
+            "night",
+            "morning",
+            "雨",
+            "雨天",
+            "圖書館",
+            "書",
+            "木質",
+            "泥土",
+            "森林",
+            "咖啡",
+        ]
 
-        # 檢查是否包含已知角色
-        for character_key, character_info in character_map.items():
-            if character_key in input_lower:
-                return {
-                    "status": "success",
-                    "character_name": character_info["name"],
-                    "source": character_info["source"],
-                    "intent": f"User wants fragrance recommendation for {character_info['name']}",
-                    "message": f"Great! I'll find fragrances that match {character_info['name']}'s personality.",
-                }
+        if any(keyword in input_lower for keyword in scene_keywords):
+            cleaned_prompt = user_input.strip()
+            return {
+                "status": "success",
+                "scene_prompt": cleaned_prompt,
+                "intent": "User wants fragrance recommendations for a scene or scent atmosphere",
+                "message": "Great! I'll find fragrances that match this scene and atmosphere.",
+            }
 
         return None
 
@@ -310,82 +371,48 @@ class CharacterAnalyzer:
         if any(greeting in input_lower for greeting in greetings):
             return {
                 "status": "invalid",
-                "character_name": None,
-                "source": None,
+                "scene_prompt": None,
                 "intent": "Casual conversation",
-                "message": "Hello! I'm here to help you find fragrances that match fictional characters. Please tell me which character you'd like to smell like, for example: 'I want to smell like Hermione Granger' or 'What fragrance would Harry Potter wear?'",
+                "message": "Hello! Tell me a scene, environment, mood, or scent brief, such as 'rainy library' or 'woody, earthy old book pages'.",
             }
 
-        # 檢查是否包含"smell like"但沒有明確角色
-        if "smell like" in input_lower:
-            if len(input_lower.split()) <= 4:  # 太短，可能缺少角色名
-                return {
-                    "status": "need_clarification",
-                    "character_name": None,
-                    "source": None,
-                    "intent": "User wants to smell like someone but didn't specify who",
-                    "message": "I'd love to help you find a fragrance! Could you please tell me which specific character you'd like to smell like? For example: 'Harry Potter', 'Hermione Granger', or 'Daisy Buchanan'.",
-                }
-
-        # 檢查是否是描述性詞語（brave, intelligent等）
-        descriptive_words = [
-            "brave",
-            "intelligent",
-            "elegant",
-            "mysterious",
-            "strong",
-            "smart",
-            "beautiful",
-            "confident",
-            "kind",
-            "powerful",
-        ]
-
-        if (
-            any(word in input_lower for word in descriptive_words)
-            and len(input_lower.split()) <= 3
-        ):
+        vague_phrases = ["something nice", "anything", "perfume", "fragrance", "scent"]
+        if input_lower in vague_phrases or len(input_lower) < 4:
             return {
                 "status": "need_clarification",
-                "character_name": None,
-                "source": None,
-                "intent": "User described traits but no specific character",
-                "message": "I understand you're looking for a fragrance for someone with those qualities! Could you please tell me a specific character name? For example: 'Hermione Granger' (intelligent), 'Harry Potter' (brave), or 'Daisy Buchanan' (elegant).",
+                "scene_prompt": None,
+                "intent": "User asked for fragrance but did not provide enough scene details",
+                "message": "I'd love to help you find a fragrance. Please add a scene, environment, mood, or scent notes, for example: 'rainy library with old book pages and damp wood'.",
             }
 
-        # 如果輸入很短或看起來像角色名但不在已知列表中
-        if len(input_lower.split()) <= 3 and len(input_lower) > 3:
+        if len(input_lower.split()) <= 3:
             return {
-                "status": "need_clarification",
-                "character_name": input_lower.title(),  # 嘗試提取作為角色名
-                "source": None,
-                "intent": "Possible character name but needs confirmation",
-                "message": f"Are you looking for fragrances that would match '{input_lower.title()}'? If so, could you please provide a bit more context about this character or confirm the spelling? This will help me give you better recommendations.",
+                "status": "success",
+                "scene_prompt": user_input.strip(),
+                "intent": "User provided a concise scene or scent prompt",
+                "message": "Great! I'll use this as the fragrance atmosphere prompt.",
             }
 
-        # 默認情況
         return {
-            "status": "need_clarification",
-            "character_name": None,
-            "source": None,
-            "intent": "Unclear input",
-            "message": "I'd love to help you find the perfect fragrance! Please tell me which fictional character you'd like to match. You can say something like: 'I want to smell like Harry Potter' or 'What fragrance would Hermione Granger wear?'",
+            "status": "success",
+            "scene_prompt": user_input.strip(),
+            "intent": "User provided a fragrance scene or scent brief",
+            "message": "Great! I'll find fragrances that match this scene and atmosphere.",
         }
 
-    # 保持原有的方法不變
-    def analyze_character(self, character_name, source_type=""):
-        """Analyze character traits (同步版本)"""
+    def analyze_scene(self, scene_prompt):
+        """Analyze scene/environment scent traits (同步版本)"""
         try:
-            print(f"🔍 開始分析角色: {character_name}")
+            print(f"🔍 開始分析情境: {scene_prompt}")
 
             content = self._safe_llm_call(
-                self.character_chain,
-                {"character_name": character_name, "source_type": source_type},
+                self.scene_chain,
+                {"scene_prompt": scene_prompt},
             )
 
             if not content:
-                print(f"⚠️ LLM 調用失敗，使用預設分析")
-                return self._get_default_character_analysis(character_name)
+                print(f"⚠️ LLM 調用失敗，使用預設情境分析")
+                return self._get_default_scene_analysis(scene_prompt)
 
             print(f"📝 LLM 原始回應 (前100字符): '{content[:100]}...'")
 
@@ -406,73 +433,55 @@ class CharacterAnalyzer:
             else:
                 print(f"⚠️ JSON 解析失敗")
 
-            return self._get_default_character_analysis(character_name)
+            return self._get_default_scene_analysis(scene_prompt)
 
         except Exception as e:
-            print(f"❌ 角色分析錯誤: {str(e)}")
-            return self._get_default_character_analysis(character_name)
+            print(f"❌ 情境分析錯誤: {str(e)}")
+            return self._get_default_scene_analysis(scene_prompt)
 
-    def _get_default_character_analysis(self, character_name):
-        """根據角色名稱提供智能預設分析"""
-        character_traits_map = {
-            "妙麗": ["intelligent", "studious", "brave", "loyal", "perfectionist"],
-            "hermione": ["intelligent", "studious", "brave", "loyal", "perfectionist"],
-            "hermione granger": [
-                "intelligent",
-                "studious",
-                "brave",
-                "loyal",
-                "perfectionist",
-            ],
-            "哈利": ["brave", "loyal", "determined", "humble", "heroic"],
-            "harry": ["brave", "loyal", "determined", "humble", "heroic"],
-            "harry potter": ["brave", "loyal", "determined", "humble", "heroic"],
-            "黛西": ["elegant", "sophisticated", "charming", "mysterious", "alluring"],
-            "daisy": ["elegant", "sophisticated", "charming", "mysterious", "alluring"],
-            "daisy buchanan": [
-                "elegant",
-                "sophisticated",
-                "charming",
-                "mysterious",
-                "alluring",
-            ],
-            "奧黛麗": ["elegant", "graceful", "timeless", "sophisticated", "charming"],
-            "audrey": ["elegant", "graceful", "timeless", "sophisticated", "charming"],
-            "audrey hepburn": [
-                "elegant",
-                "graceful",
-                "timeless",
-                "sophisticated",
-                "charming",
-            ],
-            "james bond": [
-                "sophisticated",
-                "confident",
-                "suave",
-                "mysterious",
-                "charming",
-            ],
-            "gatsby": ["romantic", "ambitious", "mysterious", "elegant", "tragic"],
-            "jay gatsby": ["romantic", "ambitious", "mysterious", "elegant", "tragic"],
+    def analyze_character(self, character_name, source_type=""):
+        """Backward-compatible wrapper now treating input as a scene prompt."""
+        scene_prompt = character_name
+        if source_type:
+            scene_prompt = f"{character_name} ({source_type})"
+        return self.analyze_scene(scene_prompt)
+
+    def _get_default_scene_analysis(self, scene_prompt):
+        """根據情境提示提供智能預設分析"""
+        prompt_lower = scene_prompt.lower()
+        traits = ["atmospheric", "evocative", "balanced", "memorable", "textured"]
+
+        scene_traits_map = {
+            "rain": ["damp", "mineral", "fresh", "earthy", "introspective"],
+            "rainy": ["damp", "mineral", "fresh", "earthy", "introspective"],
+            "雨": ["damp", "mineral", "fresh", "earthy", "introspective"],
+            "library": ["woody", "paper-like", "dusty", "quiet", "scholarly"],
+            "圖書館": ["woody", "paper-like", "dusty", "quiet", "scholarly"],
+            "book": ["paper-like", "dry", "woody", "nostalgic", "intimate"],
+            "書": ["paper-like", "dry", "woody", "nostalgic", "intimate"],
+            "earth": ["earthy", "rooty", "grounded", "damp", "natural"],
+            "泥土": ["earthy", "rooty", "grounded", "damp", "natural"],
+            "wood": ["woody", "dry", "warm", "grounded", "textured"],
+            "木": ["woody", "dry", "warm", "grounded", "textured"],
+            "coffee": ["roasted", "warm", "bitter", "cozy", "dark"],
+            "咖啡": ["roasted", "warm", "bitter", "cozy", "dark"],
         }
 
-        name_lower = character_name.lower()
-        traits = ["unique", "fascinating", "deep", "memorable", "distinctive"]
-
-        for key, mapped_traits in character_traits_map.items():
-            if key in name_lower:
+        for key, mapped_traits in scene_traits_map.items():
+            if key in prompt_lower:
                 traits = mapped_traits
                 break
 
         style_map = {
-            "intelligent": ["academic", "sophisticated"],
-            "brave": ["bold", "confident"],
-            "elegant": ["refined", "classic"],
-            "mysterious": ["enigmatic", "alluring"],
-            "sophisticated": ["refined", "classic"],
+            "damp": ["quiet", "naturalistic"],
+            "woody": ["grounded", "textural"],
+            "paper-like": ["nostalgic", "academic"],
+            "earthy": ["organic", "grounded"],
+            "roasted": ["cozy", "dark"],
+            "fresh": ["clean", "transparent"],
         }
 
-        style = ["personal", "distinctive"]
+        style = ["atmospheric", "wearable"]
         for trait in traits:
             if trait in style_map:
                 style = style_map[trait]
@@ -481,23 +490,27 @@ class CharacterAnalyzer:
         return {
             "traits": traits,
             "style": style,
-            "analysis": f"{character_name} embodies {', '.join(traits[:3])} qualities with {', '.join(style)} style.",
+            "analysis": f"This prompt suggests a {', '.join(traits[:3])} fragrance atmosphere with a {', '.join(style)} style.",
         }
+
+    def _get_default_character_analysis(self, character_name):
+        """Backward-compatible alias for older callers."""
+        return self._get_default_scene_analysis(character_name)
 
     # 保持其他原有方法不變...
     def enhance_fragrance_data(self, fragrance):
         """使用LLM增強香水資料，補充缺失的traits等資訊"""
         try:
             # 準備現有資訊
-            name = fragrance.get("Name", "").replace(",", "").strip()
-            brand = fragrance.get("Brand", "").replace(",", "").strip()
-            existing_accords = fragrance.get("Accords", "").replace(",", ", ").strip()
+            name = self._clean_text(fragrance.get("Name", "")).replace(",", "").strip()
+            brand = self._clean_text(fragrance.get("Brand", "")).replace(",", "").strip()
+            existing_accords = self._clean_text(fragrance.get("Accords", ""))
 
             # 处理Notes对象
             notes_obj = fragrance.get("Notes", {})
-            top_notes = notes_obj.get("Top Notes", "").replace(",", ", ").strip()
-            heart_notes = notes_obj.get("Heart Notes", "").replace(",", ", ").strip()
-            base_notes = notes_obj.get("Base Notes", "").replace(",", ", ").strip()
+            top_notes = self._clean_text(fragrance.get("top_notes") or notes_obj.get("Top Notes", ""))
+            heart_notes = self._clean_text(fragrance.get("heart_notes") or notes_obj.get("Middle Notes", "") or notes_obj.get("Heart Notes", ""))
+            base_notes = self._clean_text(fragrance.get("base_notes") or notes_obj.get("Base Notes", ""))
 
             notes_info = f"Top: {top_notes}, Heart: {heart_notes}, Base: {base_notes}"
 
@@ -582,35 +595,26 @@ class CharacterAnalyzer:
     def _create_basic_enhanced_fragrance(self, fragrance):
         """创建基本的增强香水数据"""
         notes_obj = fragrance.get("Notes", {})
+        accords = self._clean_text(fragrance.get("Accords", ""))
+        top_notes = self._clean_text(fragrance.get("top_notes") or notes_obj.get("Top Notes", ""))
+        heart_notes = self._clean_text(fragrance.get("heart_notes") or notes_obj.get("Middle Notes", "") or notes_obj.get("Heart Notes", ""))
+        base_notes = self._clean_text(fragrance.get("base_notes") or notes_obj.get("Base Notes", ""))
+
+        enhancement_data = self._get_basic_enhancement_data(accords)
+
         return {
             "id": str(fragrance.get("_id")),
-            "Name": fragrance.get("Name", "").replace(",", "").strip(),
-            "Brand": fragrance.get("Brand", "").replace(",", "").strip(),
-            "Accords": (
-                fragrance.get("Accords", "").replace(",", ", ").strip().split(", ")
-                if fragrance.get("Accords")
-                else []
-            ),
-            "top_notes": (
-                notes_obj.get("Top Notes", "").replace(",", ", ").strip().split(", ")
-                if notes_obj.get("Top Notes")
-                else []
-            ),
-            "heart_notes": (
-                notes_obj.get("Heart Notes", "").replace(",", ", ").strip().split(", ")
-                if notes_obj.get("Heart Notes")
-                else []
-            ),
-            "base_notes": (
-                notes_obj.get("Base Notes", "").replace(",", ", ").strip().split(", ")
-                if notes_obj.get("Base Notes")
-                else []
-            ),
-            "additional_traits": ["sophisticated", "elegant", "modern"],
-            "personality_match": ["confident", "artistic", "refined"],
-            "mood_description": "A sophisticated fragrance with unique character.",
-            "season_suitability": ["spring", "summer"],
-            "time_of_day": ["day", "evening"],
+            "Name": self._clean_text(fragrance.get("Name", "")).replace(",", "").strip(),
+            "Brand": self._clean_text(fragrance.get("Brand", "")).replace(",", "").strip(),
+            "Accords": accords.split(", ") if accords else [],
+            "top_notes": top_notes.split(", ") if top_notes else [],
+            "heart_notes": heart_notes.split(", ") if heart_notes else [],
+            "base_notes": base_notes.split(", ") if base_notes else [],
+            "additional_traits": enhancement_data.get("additional_traits", []),
+            "personality_match": enhancement_data.get("personality_match", []),
+            "mood_description": enhancement_data.get("mood_description", ""),
+            "season_suitability": enhancement_data.get("season_suitability", []),
+            "time_of_day": enhancement_data.get("time_of_day", []),
         }
 
     def match_fragrances(self, character_analysis, fragrances, num_recommendations=3):
@@ -620,10 +624,8 @@ class CharacterAnalyzer:
 
             enhanced_fragrances = []
             for i, fragrance in enumerate(fragrances):
-                enhanced = self.enhance_fragrance_data(fragrance)
+                enhanced = self._create_basic_enhanced_fragrance(fragrance)
                 enhanced_fragrances.append(enhanced)
-                if i < len(fragrances) - 1:  # 不是最後一個
-                    time.sleep(0.5)
 
             print(f"✅ 完成香水增強處理")
 
@@ -758,8 +760,13 @@ class CharacterAnalyzer:
         """智能計算匹配分數"""
         score = 0
 
-        fragrance_traits = fragrance.get("additional_traits", []) + fragrance.get(
-            "personality_match", []
+        fragrance_traits = (
+            fragrance.get("additional_traits", [])
+            + fragrance.get("personality_match", [])
+            + fragrance.get("Accords", [])
+            + fragrance.get("top_notes", [])
+            + fragrance.get("heart_notes", [])
+            + fragrance.get("base_notes", [])
         )
         for trait in character_traits:
             if any(trait.lower() in ft.lower() for ft in fragrance_traits):
@@ -788,9 +795,9 @@ class CharacterAnalyzer:
                 return f"The {', '.join(common_traits[:2])} nature perfectly aligns with {name}'s {', '.join(personality_match[:2])} qualities."
 
         if accords:
-            return f"{name}'s distinctive {', '.join(accords[:3])} blend reflects the character's unique personality."
+            return f"{name}'s distinctive {', '.join(accords[:3])} blend fits the requested atmosphere and sensory setting."
 
-        return f"This fragrance's distinctive character makes it an ideal match for such unique qualities."
+        return f"This fragrance's distinctive profile makes it a fitting match for the requested scene."
 
     def match_fragrance(self, character_analysis, fragrances):
         """Match single fragrance (向後兼容)"""
@@ -805,13 +812,14 @@ class CharacterAnalyzer:
                 if fragrances
                 else None
             ),
-            "rationale": "This fragrance's traits match the character's style.",
+            "rationale": "This fragrance's traits match the requested scene and atmosphere.",
         }
 
     def generate_description(self, fragrance):
         """Generate fragrance description (同步版本)"""
         try:
-            result = self.description_chain.invoke(
+            content = self._safe_llm_call(
+                self.description_chain,
                 {
                     "fragrance_name": fragrance["Name"],
                     "brand": fragrance["Brand"],
@@ -822,10 +830,10 @@ class CharacterAnalyzer:
                 }
             )
 
-            # 處理回應內容
-            content = result.content if hasattr(result, "content") else str(result)
-            return content.strip()
+            if content:
+                return content.strip()
 
         except Exception as e:
             print(f"Description generation error: {str(e)}")
-            return f"{fragrance['Name']} by {fragrance.get('Brand', 'Unknown Brand')} is a captivating fragrance that embodies elegance and sophistication. This unique scent offers a harmonious blend of carefully selected notes that create an unforgettable olfactory experience."
+
+        return f"{fragrance['Name']} by {fragrance.get('Brand', 'Unknown Brand')} is a captivating fragrance that embodies elegance and sophistication. This unique scent offers a harmonious blend of carefully selected notes that create an unforgettable olfactory experience."

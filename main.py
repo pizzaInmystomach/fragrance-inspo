@@ -5,6 +5,10 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import uvicorn
 import logging
+import json
+import os
+import time
+from time import perf_counter_ns
 
 from app.ai.analyzer import CharacterAnalyzer
 from app.data_handler import DataHandler
@@ -16,7 +20,7 @@ logger = logging.getLogger(__name__)
 # 初始化應用
 app = FastAPI(
     title="香氛靈感 API", 
-    description="基於角色分析的香水推薦API",
+    description="基於情境與環境分析的香水推薦API",
     version="2.0.0"
 )
 
@@ -35,8 +39,8 @@ data_handler = None
 
 # 定義資料模型
 class RecommendationRequest(BaseModel):
-    character_name: str
-    source_type: Optional[str] = ""
+    user_input: str
+    num_recommendations: Optional[int] = 3
 
 # 新增：智能輸入解析請求模型
 class SmartInputRequest(BaseModel):
@@ -46,8 +50,7 @@ class SmartInputRequest(BaseModel):
 # 新增：輸入解析回應模型
 class InputParsingResponse(BaseModel):
     status: str  # success, need_clarification, invalid
-    character_name: Optional[str] = None
-    source: Optional[str] = None
+    scene_prompt: Optional[str] = None
     intent: str
     message: str
 
@@ -61,6 +64,44 @@ class HealthResponse(BaseModel):
     message: str
     database_status: str
     total_fragrances: int
+
+class LatencyMetrics(BaseModel):
+    embedding_latency_ms: float
+    retrieval_latency_ms: float
+    llm_generation_latency_ms: float
+    end_to_end_latency_ms: float
+    generation_throughput_tokens_sec: float
+
+def _metrics_path() -> str:
+    return os.path.join(os.getcwd(), ".venv", "fragrance_metrics.json")
+
+def _write_metrics(metrics: LatencyMetrics, prompt_text: Optional[str] = None, endpoint: Optional[str] = None):
+    """Append one metrics entry to .venv/fragrance_metrics.json."""
+    metrics_path = _metrics_path()
+
+    try:
+        if os.path.exists(metrics_path):
+            with open(metrics_path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+        else:
+            data = []
+    except Exception:
+        data = []
+
+    entry = {
+        "timestamp": time.time(),
+        "prompt": prompt_text,
+        "endpoint": endpoint,
+        "metrics": metrics.model_dump() if hasattr(metrics, "model_dump") else metrics.dict()
+    }
+    data.append(entry)
+
+    os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+    with open(metrics_path, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+
+def _latency_ms(start_ns: int, end_ns: int) -> float:
+    return (end_ns - start_ns) / 1_000_000
 
 # 啟動事件
 @app.on_event("startup")
@@ -83,7 +124,7 @@ async def startup_event():
         
         # 初始化分析器
         analyzer = CharacterAnalyzer()
-        logger.info("角色分析器初始化成功")
+        logger.info("情境分析器初始化成功")
         
         logger.info("所有服務初始化完成")
         
@@ -109,7 +150,7 @@ async def shutdown_event():
 def read_root():
     """根路徑"""
     return JSONResponse(
-        content={"message": "歡迎使用香氛靈感 API v2.0 - 現已支援智能輸入解析！"}, 
+        content={"message": "歡迎使用香氛靈感 API v2.0 - 現已支援情境與環境分析！"}, 
         media_type="application/json; charset=utf-8"
     )
 
@@ -146,11 +187,11 @@ def health_check():
 @app.post("/api/parse-input", response_model=InputParsingResponse)
 def parse_user_input(request: SmartInputRequest):
     """
-    解析用戶的自然語言輸入
+    解析用戶的自然語言情境/環境輸入
     支持各種表達方式：
-    - "I want to smell like Harry Potter"
-    - "Hermione Granger"
-    - "What fragrance would Daisy wear?"
+    - "雨天圖書館"
+    - "A woody fragrance with earth and old book pages"
+    - "Something cozy for reading in the library on a rainy day"
     """
     try:
         # 檢查服務是否已初始化
@@ -167,16 +208,14 @@ def parse_user_input(request: SmartInputRequest):
         if not result:
             return InputParsingResponse(
                 status="invalid",
-                character_name=None,
-                source=None,
+                scene_prompt=None,
                 intent="Parse failed",
-                message="I couldn't understand your request. Please tell me which character you'd like to match!"
+                message="I couldn't understand your request. Please describe a scene, environment, mood, or scent notes."
             )
         
         return InputParsingResponse(
             status=result.get("status", "invalid"),
-            character_name=result.get("character_name"),
-            source=result.get("source"),
+            scene_prompt=result.get("scene_prompt"),
             intent=result.get("intent", ""),
             message=result.get("message", "")
         )
@@ -189,10 +228,11 @@ def parse_user_input(request: SmartInputRequest):
 @app.post("/api/recommend-smart")
 def get_smart_recommendations(request: SmartInputRequest):
     """
-    智能香水推薦 - 從自然語言輸入開始到完整推薦
-    這是主要的端點，支持用戶直接輸入自然語言
+    智能香水推薦 - 從情境/環境自然語言輸入開始到完整推薦
     """
     try:
+        start_e2e = perf_counter_ns()
+
         # 檢查服務是否已初始化
         if not analyzer or not data_handler:
             raise HTTPException(
@@ -203,16 +243,17 @@ def get_smart_recommendations(request: SmartInputRequest):
         logger.info(f"開始智能推薦流程，用戶輸入: {request.user_input}")
         
         # 第1步：解析用戶輸入
+        start_embedding = perf_counter_ns()
         parse_result = analyzer.parse_user_input(request.user_input.strip())
         
         if not parse_result:
             return JSONResponse(
                 content={
                     "success": False,
-                    "character_name": None,
-                    "character_analysis": None,
+                    "scene_prompt": None,
+                    "scene_analysis": None,
                     "recommendations": [],
-                    "message": "I couldn't understand your request. Please tell me which character you'd like to match!",
+                    "message": "I couldn't understand your request. Please describe a scene, environment, mood, or scent notes.",
                     "error": "Input parsing failed"
                 },
                 media_type="application/json; charset=utf-8"
@@ -223,8 +264,8 @@ def get_smart_recommendations(request: SmartInputRequest):
             return JSONResponse(
                 content={
                     "success": False,
-                    "character_name": parse_result.get("character_name"),
-                    "character_analysis": None,
+                    "scene_prompt": parse_result.get("scene_prompt"),
+                    "scene_analysis": None,
                     "recommendations": [],
                     "message": parse_result.get("message", "Please provide more information."),
                     "error": None
@@ -232,23 +273,27 @@ def get_smart_recommendations(request: SmartInputRequest):
                 media_type="application/json; charset=utf-8"
             )
         
-        character_name = parse_result.get("character_name")
-        source = parse_result.get("source", "")
+        scene_prompt = parse_result.get("scene_prompt") or request.user_input.strip()
         
-        logger.info(f"成功識別角色: {character_name} (來源: {source})")
+        logger.info(f"成功識別情境提示: {scene_prompt}")
         
-        # 第2步：分析角色
-        character_analysis = analyzer.analyze_character(character_name, source)
+        # 第2步：分析情境
+        scene_analysis = analyzer.analyze_scene(scene_prompt)
+        end_embedding = perf_counter_ns()
+        embedding_latency = _latency_ms(start_embedding, end_embedding)
         
         # 第3步：獲取香水資料
+        start_retrieval = perf_counter_ns()
         fragrances = data_handler.get_all_fragrances(limit=20)  # 限制數量以提高速度
+        end_retrieval = perf_counter_ns()
+        retrieval_latency = _latency_ms(start_retrieval, end_retrieval)
         
         if not fragrances:
             return JSONResponse(
                 content={
                     "success": False,
-                    "character_name": character_name,
-                    "character_analysis": character_analysis,
+                    "scene_prompt": scene_prompt,
+                    "scene_analysis": scene_analysis,
                     "recommendations": [],
                     "message": "No fragrances found in database.",
                     "error": "Empty database"
@@ -259,8 +304,10 @@ def get_smart_recommendations(request: SmartInputRequest):
         logger.info(f"獲取到 {len(fragrances)} 個香水進行匹配")
         
         # 第4步：匹配香水
+        start_llm = perf_counter_ns()
+        analyzer.reset_generation_metrics()
         match_result = analyzer.match_fragrances(
-            character_analysis, 
+            scene_analysis, 
             fragrances, 
             request.num_recommendations
         )
@@ -291,13 +338,32 @@ def get_smart_recommendations(request: SmartInputRequest):
                     "description": description,
                     "match_score": rec.get("match_score", 0)
                 })
+        end_llm = perf_counter_ns()
+        llm_latency = _latency_ms(start_llm, end_llm)
+        llm_seconds = llm_latency / 1000.0
+        eval_count = getattr(analyzer, "last_generation_tokens", 0)
+        generation_throughput = eval_count / llm_seconds if llm_seconds > 0 else 0.0
+        end_to_end_latency = _latency_ms(start_e2e, perf_counter_ns())
+
+        metrics_data = LatencyMetrics(
+            embedding_latency_ms=round(embedding_latency, 2),
+            retrieval_latency_ms=round(retrieval_latency, 2),
+            llm_generation_latency_ms=round(llm_latency, 2),
+            end_to_end_latency_ms=round(end_to_end_latency, 2),
+            generation_throughput_tokens_sec=round(generation_throughput, 2)
+        )
+
+        try:
+            _write_metrics(metrics_data, request.user_input, "/api/recommend-smart")
+        except Exception:
+            logger.exception("Failed to write metrics")
         
-        success_message = f"Found {len(recommendations)} perfect fragrance matches for {character_name}!"
+        success_message = f"Found {len(recommendations)} fragrance matches for this scene!"
         
         result = {
             "success": True,
-            "character_name": character_name,
-            "character_analysis": character_analysis,
+            "scene_prompt": scene_prompt,
+            "scene_analysis": scene_analysis,
             "recommendations": recommendations,
             "message": success_message,
             "error": None
@@ -310,8 +376,8 @@ def get_smart_recommendations(request: SmartInputRequest):
         return JSONResponse(
             content={
                 "success": False,
-                "character_name": None,
-                "character_analysis": None,
+                "scene_prompt": None,
+                "scene_analysis": None,
                 "recommendations": [],
                 "message": "An error occurred while processing your request.",
                 "error": str(e)
@@ -321,8 +387,10 @@ def get_smart_recommendations(request: SmartInputRequest):
 
 @app.post("/api/recommendations")
 def get_recommendations(request: RecommendationRequest):
-    """獲取角色香水推薦（傳統方式）"""
+    """根據情境與環境分析獲取香水推薦"""
     try:
+        start_e2e = perf_counter_ns()
+
         # 檢查服務是否已初始化
         if not analyzer or not data_handler:
             raise HTTPException(
@@ -330,27 +398,36 @@ def get_recommendations(request: RecommendationRequest):
                 detail="服務尚未初始化完成，請稍後再試"
             )
         
-        logger.info(f"開始處理推薦請求: {request.character_name}")
+        scene_prompt = request.user_input.strip()
+        if not scene_prompt:
+            raise HTTPException(status_code=400, detail="user_input 不可為空")
+
+        logger.info(f"開始處理情境推薦請求: {scene_prompt}")
         
-        # 1. 分析角色 (使用同步版本)
-        character_analysis = analyzer.analyze_character(
-            request.character_name, 
-            request.source_type
-        )
-        logger.info(f"角色分析完成: {request.character_name}")
+        # 1. 分析情境 (使用同步版本)
+        start_embedding = perf_counter_ns()
+        scene_analysis = analyzer.analyze_scene(scene_prompt)
+        end_embedding = perf_counter_ns()
+        embedding_latency = _latency_ms(start_embedding, end_embedding)
+        logger.info(f"情境分析完成: {scene_prompt}")
         
         # 2. 獲取香水資料
-        fragrances = data_handler.get_all_fragrances()
+        start_retrieval = perf_counter_ns()
+        fragrances = data_handler.get_all_fragrances(limit=20)
+        end_retrieval = perf_counter_ns()
+        retrieval_latency = _latency_ms(start_retrieval, end_retrieval)
         if not fragrances:
             raise HTTPException(status_code=500, detail="無法獲取香水資料")
         
         logger.info(f"已獲取 {len(fragrances)} 筆香水資料")
         
         # 3. 匹配香水 (使用同步版本，取得3個推薦)
+        start_llm = perf_counter_ns()
+        analyzer.reset_generation_metrics()
         match_result = analyzer.match_fragrances(
-            character_analysis,
+            scene_analysis,
             fragrances,
-            num_recommendations=3
+            num_recommendations=request.num_recommendations
         )
         
         if not match_result or not match_result.get("recommendations"):
@@ -386,22 +463,44 @@ def get_recommendations(request: RecommendationRequest):
                 "match_score": rec.get("match_score", 0)
             }
             enhanced_recommendations.append(enhanced_rec)
+        end_llm = perf_counter_ns()
+        llm_latency = _latency_ms(start_llm, end_llm)
+        llm_seconds = llm_latency / 1000.0
+        eval_count = getattr(analyzer, "last_generation_tokens", 0)
+        generation_throughput = eval_count / llm_seconds if llm_seconds > 0 else 0.0
+        end_to_end_latency = _latency_ms(start_e2e, perf_counter_ns())
+
+        metrics_data = LatencyMetrics(
+            embedding_latency_ms=round(embedding_latency, 2),
+            retrieval_latency_ms=round(retrieval_latency, 2),
+            llm_generation_latency_ms=round(llm_latency, 2),
+            end_to_end_latency_ms=round(end_to_end_latency, 2),
+            generation_throughput_tokens_sec=round(generation_throughput, 2)
+        )
+
+        try:
+            _write_metrics(
+                metrics_data,
+                scene_prompt,
+                "/api/recommendations"
+            )
+        except Exception:
+            logger.exception("Failed to write metrics")
         
         logger.info("所有香水描述生成完成")
         
         # 5. 組合推薦結果
         result = {
-            "character": {
-                "name": request.character_name,
-                "source": request.source_type,
-                **character_analysis
+            "scene": {
+                "prompt": scene_prompt,
+                **scene_analysis
             },
             "recommendations": enhanced_recommendations,
             "total_recommendations": len(enhanced_recommendations),
             "timestamp": None  # 可以加入時間戳記
         }
         
-        logger.info(f"推薦請求處理完成: {request.character_name}")
+        logger.info(f"推薦請求處理完成: {scene_prompt}")
         return JSONResponse(content=result, media_type="application/json; charset=utf-8")
     
     except HTTPException:
@@ -410,6 +509,29 @@ def get_recommendations(request: RecommendationRequest):
     except Exception as e:
         logger.error(f"處理推薦請求時出錯: {str(e)}")
         raise HTTPException(status_code=500, detail=f"處理推薦請求時出錯: {str(e)}")
+
+@app.get("/metrics/latest")
+def get_latest_metrics():
+    """回傳 .venv/fragrance_metrics.json 中最新的一筆 metrics。"""
+    metrics_path = _metrics_path()
+    if not os.path.exists(metrics_path):
+        raise HTTPException(status_code=404, detail="No metrics found")
+
+    try:
+        with open(metrics_path, "r", encoding="utf-8") as fh:
+            entries = json.load(fh)
+
+        if not entries:
+            raise HTTPException(status_code=404, detail="No metrics entries")
+
+        return entries[-1]
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Metrics file corrupted")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error reading metrics: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to read metrics")
 
 # 新增：獲取熱門角色列表
 @app.get("/api/characters/popular")

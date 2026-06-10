@@ -1,0 +1,50 @@
+[
+  {
+    "timestamp": 1781085805.566942,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommendations",
+    "metrics": {
+      "embedding_latency_ms": 0.02,
+      "retrieval_latency_ms": 1.52,
+      "llm_generation_latency_ms": 0.68,
+      "end_to_end_latency_ms": 2.35,
+      "generation_throughput_tokens_sec": 0.0
+    }
+  },
+  {
+    "timestamp": 1781087672.21431,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 0.09,
+      "retrieval_latency_ms": 2.59,
+      "llm_generation_latency_ms": 0.81,
+      "end_to_end_latency_ms": 3.62,
+      "generation_throughput_tokens_sec": 0.0
+    }
+  },
+  {
+    "timestamp": 1781089124.5540411,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 1238.75,
+      "retrieval_latency_ms": 3.54,
+      "llm_generation_latency_ms": 1.46,
+      "end_to_end_latency_ms": 1243.85,
+      "generation_throughput_tokens_sec": 0.0
+    }
+  },
+  {
+    "timestamp": 1781090149.6686609,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 1395.72,
+      "retrieval_latency_ms": 4.13,
+      "llm_generation_latency_ms": 10275.43,
+      "end_to_end_latency_ms": 11675.45,
+      "generation_throughput_tokens_sec": 83.99
+    }
+  }
+]

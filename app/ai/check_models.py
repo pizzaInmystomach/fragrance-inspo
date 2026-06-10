@@ -63,8 +63,8 @@ def check_available_models():
         recommended_models = {
             "快速開發": "llama-3.1-8b-instant",
             "生產環境": "llama-3.1-8b-instant",
-            "最佳品質": "llama-3.1-70b-versatile",
-            "輕量選擇": "gemma2-9b-it",
+            "最佳品質": "llama-3.3-70b-versatile",
+            "輕量選擇": "qwen/qwen3-32b",
         }
 
         for use_case, model in recommended_models.items():
@@ -90,11 +90,11 @@ def test_specific_models():
     # 要測試的模型列表
     test_models = [
         "llama-3.1-8b-instant",
-        "llama-3.1-70b-versatile",
-        "gemma2-9b-it",
-        "gemma-7b-it",
-        "llama3-groq-8b-8192-tool-use-preview",
-        "llama3-groq-70b-8192-tool-use-preview",
+        "llama-3.3-70b-versatile",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "qwen/qwen3-32b",
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b"
     ]
 
     try:

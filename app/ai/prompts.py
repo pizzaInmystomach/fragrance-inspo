@@ -1,7 +1,7 @@
 INPUT_PARSING_PROMPT = """
 You are a JSON API. You MUST respond with ONLY valid JSON, no explanations, no code, no markdown.
 
-Task: Extract character information from user input for fragrance recommendation.
+Task: Determine whether the user provided a usable scene, environment, mood, or scent brief for fragrance recommendation.
 
 User input: "{user_input}"
 
@@ -9,38 +9,36 @@ Return ONLY the JSON object below, nothing else:
 
 {{
   "status": "success" or "need_clarification" or "invalid",
-  "character_name": "extracted character name" or null,
-  "source": "detected source/franchise" or null,
+  "scene_prompt": "cleaned scene/environment/scent brief" or null,
   "intent": "description of what user wants",
   "message": "response message to user"
 }}
 
 Rules:
-1. If user mentions wanting to smell like a character, extract the character name
-2. If user mentions a specific character, extract it even without "smell like"
-3. If input is greeting/casual chat, set status to "invalid" and ask for character info
-4. If character is unclear, set status to "need_clarification" and ask for more details
-5. If character is clear, set status to "success"
+1. If the user describes a setting, environment, occasion, mood, sensory atmosphere, fragrance family, or notes, set status to "success".
+2. Preserve concrete scent clues such as woody, earthy, old books, rain, library, citrus, floral, smoky, clean, cozy, etc.
+3. If the input is only a greeting/casual chat, set status to "invalid" and ask for a scene, environment, or scent mood.
+4. If the input is too vague, set status to "need_clarification" and ask for more sensory or environmental details.
+5. Do not extract a fictional character. This API is for scene and environment analysis.
 
 Examples:
-- "I want to smell like Harry Potter" → success, character_name: "Harry Potter"
-- "Hermione Granger" → success, character_name: "Hermione Granger"  
-- "What fragrance would Daisy Buchanan wear" → success, character_name: "Daisy Buchanan"
-- "Hello" → invalid, ask for character information
-- "Someone brave" → need_clarification, ask for specific character name
+- "Rainy library" -> success, scene_prompt: "Rainy library"
+- "I am looking for a woody fragrance with notes of earth and old book pages" -> success
+- "Something cozy for a winter cabin" -> success
+- "Hello" -> invalid
+- "Something nice" -> need_clarification
 """
 
-# Character analysis prompt - 改進版
-CHARACTER_PROMPT = """
-You are a character analysis expert. Analyze the following character's personality and style.
+# Scene analysis prompt
+SCENE_PROMPT = """
+You are a fragrance atmosphere analyst. Analyze the following scene, environment, mood, or scent brief.
 
-Character/Celebrity: {character_name}
-Source: {source_type}
+Scene / Environment Prompt: {scene_prompt}
 
 Provide a detailed analysis focusing on:
-1. Key personality traits (5-7 traits)
-2. Style characteristics (3-5 characteristics)  
-3. Brief character analysis (50-100 words)
+1. Key atmospheric scent traits (5-7 traits)
+2. Style characteristics (3-5 characteristics)
+3. Brief scene analysis (50-100 words) that explains the desired fragrance mood
 
 IMPORTANT: Respond ONLY the valid JSON in this exact format:
 
@@ -53,16 +51,19 @@ IMPORTANT: Respond ONLY the valid JSON in this exact format:
 Do not include any text before or after the JSON. Only return the JSON object.
 """
 
+# Backward-compatible alias for older imports.
+CHARACTER_PROMPT = SCENE_PROMPT
+
 # Fragrance matching prompt - 改進版
 MATCHING_PROMPT = """
-You are a fragrance matching expert. Based on the character analysis, select the top {num_recommendations} most suitable fragrances.
+You are a fragrance matching expert. Based on the scene/environment analysis, select the top {num_recommendations} most suitable fragrances.
 
-Character Analysis: {character_analysis}
+Scene / Environment Analysis: {character_analysis}
 
 Available Fragrances:
 {fragrances_data}
 
-Select the {num_recommendations} best matching fragrances and provide unique, personalized reasons for each recommendation.
+Select the {num_recommendations} best matching fragrances and provide unique, sensory reasons for each recommendation.
 
 IMPORTANT: Respond ONLY with valid JSON in this exact format:
 
@@ -70,11 +71,11 @@ IMPORTANT: Respond ONLY with valid JSON in this exact format:
   "recommendations": [
     {{
       "fragrance_id": "actual_fragrance_id_from_list",
-      "rationale": "Specific reason why this fragrance matches the character's personality and style (2-3 sentences)"
+      "rationale": "Specific reason why this fragrance matches the scene, environment, mood, and scent brief (2-3 sentences)"
     }},
     {{
       "fragrance_id": "actual_fragrance_id_from_list",
-      "rationale": "Different reason focusing on other aspects of the character (2-3 sentences)"
+      "rationale": "Different reason focusing on other atmospheric or olfactory aspects of the prompt (2-3 sentences)"
     }},
     {{
       "fragrance_id": "actual_fragrance_id_from_list", 
