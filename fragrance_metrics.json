@@ -108,5 +108,115 @@
       "end_to_end_latency_ms": 14031.99,
       "generation_throughput_tokens_sec": 14.33
     }
+  },
+  {
+    "timestamp": 1781352479.7409868,
+    "prompt": "I want a smoky forest fragrance with pine needles, burning wood, and damp moss for autumn evenings.",
+    "metrics": {
+      "embedding_latency_ms": 59.67,
+      "retrieval_latency_ms": 93.3,
+      "llm_generation_latency_ms": 14462.99,
+      "end_to_end_latency_ms": 14616.06,
+      "generation_throughput_tokens_sec": 14.73
+    }
+  },
+  {
+    "timestamp": 1781352500.767264,
+    "prompt": "Looking for a tropical scent with creamy coconut, pineapple, and frangipani that feels like an island vacation.",
+    "metrics": {
+      "embedding_latency_ms": 54.19,
+      "retrieval_latency_ms": 96.62,
+      "llm_generation_latency_ms": 14003.51,
+      "end_to_end_latency_ms": 14154.45,
+      "generation_throughput_tokens_sec": 14.28
+    }
+  },
+  {
+    "timestamp": 1781352526.869164,
+    "prompt": "I need an elegant office fragrance with iris, violet, and smooth sandalwood that is refined but not overpowering.",
+    "metrics": {
+      "embedding_latency_ms": 45.42,
+      "retrieval_latency_ms": 21.71,
+      "llm_generation_latency_ms": 16751.42,
+      "end_to_end_latency_ms": 16818.67,
+      "generation_throughput_tokens_sec": 14.45
+    }
+  },
+  {
+    "timestamp": 1781352544.0658062,
+    "prompt": "Recommend a lively spicy scent with ginger, cardamom, and pink pepper for a night out.",
+    "metrics": {
+      "embedding_latency_ms": 41.97,
+      "retrieval_latency_ms": 21.15,
+      "llm_generation_latency_ms": 13366.08,
+      "end_to_end_latency_ms": 13429.35,
+      "generation_throughput_tokens_sec": 14.36
+    }
+  },
+  {
+    "timestamp": 1781352563.1359518,
+    "prompt": "I am searching for a delicate spring perfume with cherry blossoms, pear, and a light airy musk.",
+    "metrics": {
+      "embedding_latency_ms": 45.16,
+      "retrieval_latency_ms": 18.7,
+      "llm_generation_latency_ms": 12946.54,
+      "end_to_end_latency_ms": 13010.53,
+      "generation_throughput_tokens_sec": 14.6
+    }
+  },
+  {
+    "timestamp": 1781352589.657939,
+    "prompt": "Give me a rich boozy fragrance that smells like aged rum, dried fruits, and an oak barrel beside a fireplace.",
+    "metrics": {
+      "embedding_latency_ms": 46.85,
+      "retrieval_latency_ms": 16.01,
+      "llm_generation_latency_ms": 16094.74,
+      "end_to_end_latency_ms": 16157.86,
+      "generation_throughput_tokens_sec": 14.35
+    }
+  },
+  {
+    "timestamp": 1781352607.411326,
+    "prompt": "I want an unusual mineral scent with cold stone, rain, and metallic notes that feels like a futuristic city.",
+    "metrics": {
+      "embedding_latency_ms": 41.43,
+      "retrieval_latency_ms": 15.18,
+      "llm_generation_latency_ms": 14784.2,
+      "end_to_end_latency_ms": 14840.87,
+      "generation_throughput_tokens_sec": 14.61
+    }
+  },
+  {
+    "timestamp": 1781352626.642957,
+    "prompt": "Looking for a comforting bedtime fragrance with lavender, chamomile, and creamy tonka bean.",
+    "metrics": {
+      "embedding_latency_ms": 42.83,
+      "retrieval_latency_ms": 14.75,
+      "llm_generation_latency_ms": 13788.3,
+      "end_to_end_latency_ms": 13845.94,
+      "generation_throughput_tokens_sec": 14.51
+    }
+  },
+  {
+    "timestamp": 1781352681.996682,
+    "prompt": "Recommend a sophisticated chypre perfume with bergamot, oakmoss, patchouli, and a dry earthy character.",
+    "metrics": {
+      "embedding_latency_ms": 44.52,
+      "retrieval_latency_ms": 29.59,
+      "llm_generation_latency_ms": 18375.28,
+      "end_to_end_latency_ms": 18449.45,
+      "generation_throughput_tokens_sec": 14.97
+    }
+  },
+  {
+    "timestamp": 1781352885.311483,
+    "prompt": "I need a bright energizing fragrance for the gym with grapefruit, eucalyptus, and crisp green apple.",
+    "metrics": {
+      "embedding_latency_ms": 125.77,
+      "retrieval_latency_ms": 14.3,
+      "llm_generation_latency_ms": 13538.36,
+      "end_to_end_latency_ms": 13679.13,
+      "generation_throughput_tokens_sec": 14.33
+    }
   }
 ]
