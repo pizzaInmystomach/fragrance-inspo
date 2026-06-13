@@ -1,0 +1,242 @@
+[
+  {
+    "timestamp": 1781350846.365812,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 1619.31,
+      "retrieval_latency_ms": 43.09,
+      "llm_generation_latency_ms": 5390.08,
+      "end_to_end_latency_ms": 7052.65,
+      "generation_throughput_tokens_sec": 166.05
+    }
+  },
+  {
+    "timestamp": 1781350865.822528,
+    "prompt": "I want a fresh citrus scent that feels like walking through an orange grove on a bright summer morning.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 726.04,
+      "retrieval_latency_ms": 34.84,
+      "llm_generation_latency_ms": 4983.32,
+      "end_to_end_latency_ms": 5744.29,
+      "generation_throughput_tokens_sec": 171.17
+    }
+  },
+  {
+    "timestamp": 1781350890.70731,
+    "prompt": "Looking for a clean oceanic perfume with hints of sea salt and mint for hot beach days.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 668.15,
+      "retrieval_latency_ms": 46.31,
+      "llm_generation_latency_ms": 4153.68,
+      "end_to_end_latency_ms": 4868.22,
+      "generation_throughput_tokens_sec": 194.04
+    }
+  },
+  {
+    "timestamp": 1781350911.191344,
+    "prompt": "A romantic floral fragrance dominated by white roses and jasmine with a soft powdery finish.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 643.89,
+      "retrieval_latency_ms": 62.56,
+      "llm_generation_latency_ms": 4425.64,
+      "end_to_end_latency_ms": 5132.2,
+      "generation_throughput_tokens_sec": 192.29
+    }
+  },
+  {
+    "timestamp": 1781350925.00852,
+    "prompt": "Searching for a sweet gourmand perfume that smells like vanilla beans cacao and warm caramel.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 2524.73,
+      "retrieval_latency_ms": 43.16,
+      "llm_generation_latency_ms": 4644.9,
+      "end_to_end_latency_ms": 7212.89,
+      "generation_throughput_tokens_sec": 188.59
+    }
+  },
+  {
+    "timestamp": 1781350937.30044,
+    "prompt": "I need a green herbal scent with crushed mint leaves green tea and wet grass notes.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 608.65,
+      "retrieval_latency_ms": 45.9,
+      "llm_generation_latency_ms": 4301.71,
+      "end_to_end_latency_ms": 4956.36,
+      "generation_throughput_tokens_sec": 192.95
+    }
+  },
+  {
+    "timestamp": 1781350948.663187,
+    "prompt": "A warm oriental fragrance featuring spicy cinnamon amber and exotic incense for winter nights.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 589.95,
+      "retrieval_latency_ms": 33.2,
+      "llm_generation_latency_ms": 5291.02,
+      "end_to_end_latency_ms": 5914.26,
+      "generation_throughput_tokens_sec": 155.55
+    }
+  },
+  {
+    "timestamp": 1781350958.184792,
+    "prompt": "A dark mysterious perfume combining smoky tobacco black pepper and rich leather accents.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 867.37,
+      "retrieval_latency_ms": 46.86,
+      "llm_generation_latency_ms": 4684.41,
+      "end_to_end_latency_ms": 5598.74,
+      "generation_throughput_tokens_sec": 176.76
+    }
+  },
+  {
+    "timestamp": 1781350967.913305,
+    "prompt": "A sweet fruity fragrance with ripe peaches juicy red berries and a touch of honey.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 992.38,
+      "retrieval_latency_ms": 35.41,
+      "llm_generation_latency_ms": 4184.24,
+      "end_to_end_latency_ms": 5212.14,
+      "generation_throughput_tokens_sec": 197.17
+    }
+  },
+  {
+    "timestamp": 1781350977.744365,
+    "prompt": "Looking for a subtle skin scent with white musk soft cedarwood and a clean laundry feel.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 774.81,
+      "retrieval_latency_ms": 35.57,
+      "llm_generation_latency_ms": 4778.16,
+      "end_to_end_latency_ms": 5588.63,
+      "generation_throughput_tokens_sec": 176.01
+    }
+  },
+  {
+    "timestamp": 1781351533.242955,
+    "prompt": "I want a smoky forest fragrance with pine needles, burning wood, and damp moss for autumn evenings.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 660.55,
+      "retrieval_latency_ms": 56.5,
+      "llm_generation_latency_ms": 4850.86,
+      "end_to_end_latency_ms": 5568.62,
+      "generation_throughput_tokens_sec": 184.3
+    }
+  },
+  {
+    "timestamp": 1781351562.324708,
+    "prompt": "Looking for a tropical scent with creamy coconut, pineapple, and frangipani that feels like an island vacation.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 2213.57,
+      "retrieval_latency_ms": 54.28,
+      "llm_generation_latency_ms": 4451.77,
+      "end_to_end_latency_ms": 6719.72,
+      "generation_throughput_tokens_sec": 177.46
+    }
+  },
+  {
+    "timestamp": 1781351576.967595,
+    "prompt": "I need an elegant office fragrance with iris, violet, and smooth sandalwood that is refined but not overpowering.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 550.18,
+      "retrieval_latency_ms": 37.02,
+      "llm_generation_latency_ms": 4741.9,
+      "end_to_end_latency_ms": 5329.18,
+      "generation_throughput_tokens_sec": 181.15
+    }
+  },
+  {
+    "timestamp": 1781351588.02768,
+    "prompt": "Recommend a lively spicy scent with ginger, cardamom, and pink pepper for a night out.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 685.74,
+      "retrieval_latency_ms": 46.85,
+      "llm_generation_latency_ms": 5997.64,
+      "end_to_end_latency_ms": 6730.33,
+      "generation_throughput_tokens_sec": 138.72
+    }
+  },
+  {
+    "timestamp": 1781351598.071003,
+    "prompt": "I am searching for a delicate spring perfume with cherry blossoms, pear, and a light airy musk.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 1105.3,
+      "retrieval_latency_ms": 32.71,
+      "llm_generation_latency_ms": 4018.79,
+      "end_to_end_latency_ms": 5156.99,
+      "generation_throughput_tokens_sec": 198.82
+    }
+  },
+  {
+    "timestamp": 1781351606.2810209,
+    "prompt": "Give me a rich boozy fragrance that smells like aged rum, dried fruits, and an oak barrel beside a fireplace.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 1079.53,
+      "retrieval_latency_ms": 46.9,
+      "llm_generation_latency_ms": 4029.22,
+      "end_to_end_latency_ms": 5155.74,
+      "generation_throughput_tokens_sec": 227.84
+    }
+  },
+  {
+    "timestamp": 1781351616.820404,
+    "prompt": "I want an unusual mineral scent with cold stone, rain, and metallic notes that feels like a futuristic city.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 763.82,
+      "retrieval_latency_ms": 55.33,
+      "llm_generation_latency_ms": 4470.12,
+      "end_to_end_latency_ms": 5289.4,
+      "generation_throughput_tokens_sec": 186.35
+    }
+  },
+  {
+    "timestamp": 1781351626.116528,
+    "prompt": "Looking for a comforting bedtime fragrance with lavender, chamomile, and creamy tonka bean.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 1167.86,
+      "retrieval_latency_ms": 42.82,
+      "llm_generation_latency_ms": 4769.09,
+      "end_to_end_latency_ms": 5979.86,
+      "generation_throughput_tokens_sec": 176.97
+    }
+  },
+  {
+    "timestamp": 1781351637.38767,
+    "prompt": "Recommend a sophisticated chypre perfume with bergamot, oakmoss, patchouli, and a dry earthy character.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 635.81,
+      "retrieval_latency_ms": 50.61,
+      "llm_generation_latency_ms": 5052.21,
+      "end_to_end_latency_ms": 5738.73,
+      "generation_throughput_tokens_sec": 163.69
+    }
+  },
+  {
+    "timestamp": 1781351646.7244868,
+    "prompt": "I need a bright energizing fragrance for the gym with grapefruit, eucalyptus, and crisp green apple.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 1316.43,
+      "retrieval_latency_ms": 35.87,
+      "llm_generation_latency_ms": 3982.23,
+      "end_to_end_latency_ms": 5334.63,
+      "generation_throughput_tokens_sec": 204.41
+    }
+  }
+]
