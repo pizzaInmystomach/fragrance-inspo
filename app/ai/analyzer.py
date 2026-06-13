@@ -1,6 +1,8 @@
 import json
+import os
 import time
 import re
+from collections import Counter
 from langchain.prompts import PromptTemplate
 from .llm_config import get_balanced_model, get_fast_model
 from .prompts import (
@@ -61,7 +63,11 @@ class CharacterAnalyzer:
         self.description_chain = self.description_prompt | self.llm
         self.trait_enhancement_chain = self.trait_enhancement_prompt | self.fast_llm
         self.last_generation_tokens = 0
-        self.llm_unavailable = False
+        self.require_llm = os.getenv("REQUIRE_LLM_RECOMMENDATIONS", "true").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
 
     def reset_generation_metrics(self):
         """Reset token counters before measuring a generation stage."""
@@ -88,9 +94,6 @@ class CharacterAnalyzer:
 
     def _safe_llm_call_with_usage(self, chain, inputs, retries=2, delay=1):
         """安全的 LLM 調用，並記錄 output token 數。"""
-        if self.llm_unavailable:
-            return {"content": None, "output_tokens": 0}
-
         for attempt in range(retries + 1):
             try:
                 if attempt > 0:
@@ -110,8 +113,7 @@ class CharacterAnalyzer:
             except Exception as e:
                 error_msg = str(e).lower()
                 if "model_decommissioned" in error_msg or "decommissioned" in error_msg:
-                    print("LLM 模型已不可用，改用本地 fallback。")
-                    self.llm_unavailable = True
+                    print("LLM 模型已不可用，請更新 llm_config.py 或 GROQ_*_MODEL 環境變數。")
                     return {"content": None, "output_tokens": 0}
 
                 if "429" in error_msg or "rate limit" in error_msg:
@@ -136,6 +138,16 @@ class CharacterAnalyzer:
         """安全的 LLM 調用，包含重試機制和錯誤處理"""
         result = self._safe_llm_call_with_usage(chain, inputs, retries, delay)
         return result["content"]
+
+    def _require_llm_content(self, content, stage):
+        if content:
+            return content
+        if self.require_llm:
+            raise RuntimeError(
+                f"{stage} requires a successful LLM response. "
+                "Check GROQ_API_KEY and GROQ_*_MODEL settings."
+            )
+        return None
 
     def _extract_json_from_text(self, text):
         """從文本中提取 JSON - 強化版本（修復引號問題）"""
@@ -409,6 +421,7 @@ class CharacterAnalyzer:
                 self.scene_chain,
                 {"scene_prompt": scene_prompt},
             )
+            content = self._require_llm_content(content, "Scene analysis")
 
             if not content:
                 print(f"⚠️ LLM 調用失敗，使用預設情境分析")
@@ -433,10 +446,15 @@ class CharacterAnalyzer:
             else:
                 print(f"⚠️ JSON 解析失敗")
 
+            if self.require_llm:
+                raise RuntimeError("Scene analysis LLM response was not valid JSON.")
+
             return self._get_default_scene_analysis(scene_prompt)
 
         except Exception as e:
             print(f"❌ 情境分析錯誤: {str(e)}")
+            if self.require_llm:
+                raise
             return self._get_default_scene_analysis(scene_prompt)
 
     def analyze_character(self, character_name, source_type=""):
@@ -617,23 +635,157 @@ class CharacterAnalyzer:
             "time_of_day": enhancement_data.get("time_of_day", []),
         }
 
+    def rank_fragrances_locally(
+        self, scene_prompt, scene_analysis, fragrances, top_k=5
+    ):
+        """Rank MongoDB candidates locally using weighted lexical relevance."""
+        top_k = max(1, int(top_k))
+        query_terms = self._tokenize_relevance_text(
+            " ".join(
+                [
+                    scene_prompt,
+                    " ".join(scene_analysis.get("traits", [])),
+                    " ".join(scene_analysis.get("style", [])),
+                    scene_analysis.get("analysis", ""),
+                ]
+            )
+        )
+        query_counts = Counter(query_terms)
+
+        weighted_fields = (
+            ("Accords", 4.0),
+            ("main_accords", 4.0),
+            ("top_notes", 3.0),
+            ("heart_notes", 3.0),
+            ("base_notes", 3.0),
+            ("Notes", 3.0),
+            ("Name", 1.5),
+            ("Brand", 0.5),
+        )
+
+        scored = []
+        for position, fragrance in enumerate(fragrances):
+            score = 0.0
+            for field, weight in weighted_fields:
+                field_terms = Counter(
+                    self._tokenize_relevance_text(fragrance.get(field, ""))
+                )
+                score += weight * sum(
+                    min(count, field_terms.get(term, 0))
+                    for term, count in query_counts.items()
+                )
+
+            scored.append((score, -position, fragrance))
+
+        scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        selected = [item[2] for item in scored[:top_k]]
+
+        print(
+            f"本地文字相關度排序完成：從 {len(fragrances)} 筆候選取 top {len(selected)}"
+        )
+        return selected
+
+    def _tokenize_relevance_text(self, value):
+        text = self._clean_text(value).lower()
+        return re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)?|[\u4e00-\u9fff]+", text)
+
     def match_fragrances(self, character_analysis, fragrances, num_recommendations=3):
-        """Match fragrances based on character analysis"""
+        """Use the LLM to match one candidate batch."""
         try:
             print(f"🔄 開始處理 {len(fragrances)} 個香水...")
 
-            enhanced_fragrances = []
-            for i, fragrance in enumerate(fragrances):
-                enhanced = self._create_basic_enhanced_fragrance(fragrance)
-                enhanced_fragrances.append(enhanced)
+            enhanced_fragrances = [
+                self._create_basic_enhanced_fragrance(fragrance)
+                for fragrance in fragrances
+            ]
 
             print(f"✅ 完成香水增強處理")
+            return self._match_enhanced_fragrances(
+                character_analysis,
+                enhanced_fragrances,
+                num_recommendations,
+            )
+        except Exception as e:
+            print(f"❌ 香水匹配錯誤: {str(e)}")
+            if self.require_llm:
+                raise
+            return self._generate_smart_recommendations(
+                enhanced_fragrances if "enhanced_fragrances" in locals() else [],
+                character_analysis,
+                num_recommendations,
+            )
 
+    def match_fragrance_batches(
+        self, character_analysis, fragrance_batches, num_recommendations=3
+    ):
+        """Run LLM matching per batch, then rerank all batch winners with the LLM."""
+        finalists = []
+        total_batches = len(fragrance_batches)
+
+        for index, batch in enumerate(fragrance_batches, 1):
+            print(f"🤖 LLM 匹配批次 {index}/{total_batches}，候選 {len(batch)} 筆")
+            batch_result = self.match_fragrances(
+                character_analysis,
+                batch,
+                num_recommendations=num_recommendations,
+            )
+            finalists.extend(
+                rec["fragrance"]
+                for rec in batch_result.get("recommendations", [])
+                if rec.get("fragrance")
+            )
+
+        if not finalists:
+            return {"recommendations": []}
+
+        rerank_batch_size = 50
+        round_number = 1
+
+        while len(finalists) > rerank_batch_size:
+            next_round = []
+            groups = [
+                finalists[index : index + rerank_batch_size]
+                for index in range(0, len(finalists), rerank_batch_size)
+            ]
+            print(
+                f"🏁 LLM 淘汰排名第 {round_number} 輪："
+                f"{len(finalists)} 個候選，分成 {len(groups)} 組"
+            )
+
+            for group in groups:
+                group_result = self._match_enhanced_fragrances(
+                    character_analysis,
+                    group,
+                    num_recommendations,
+                )
+                next_round.extend(
+                    rec["fragrance"]
+                    for rec in group_result.get("recommendations", [])
+                    if rec.get("fragrance")
+                )
+
+            finalists = next_round
+            round_number += 1
+
+        print(f"🏁 LLM 最終排名，共 {len(finalists)} 個批次優勝候選")
+        return self._match_enhanced_fragrances(
+            character_analysis,
+            finalists,
+            num_recommendations,
+        )
+
+    def _match_enhanced_fragrances(
+        self, character_analysis, enhanced_fragrances, num_recommendations
+    ):
+        try:
             # Format fragrance data for LLM
             fragrances_text = "\n".join(
                 [
                     f"ID: {f['id']}, Name: {f['Name']}, Brand: {f['Brand']}, "
                     f"Accords: {', '.join(f['Accords'])}, "
+                    f"Top Notes: {', '.join(f['top_notes'])}, "
+                    f"Heart Notes: {', '.join(f['heart_notes'])}, "
+                    f"Base Notes: {', '.join(f['base_notes'])}, "
                     f"Additional Traits: {', '.join(f['additional_traits'])}, "
                     f"Personality Match: {', '.join(f['personality_match'])}"
                     for f in enhanced_fragrances
@@ -652,6 +804,7 @@ class CharacterAnalyzer:
                     "num_recommendations": num_recommendations,
                 },
             )
+            content = self._require_llm_content(content, "Fragrance matching")
 
             if content:
                 print(f"📝 匹配 LLM 回應:")
@@ -670,6 +823,9 @@ class CharacterAnalyzer:
                         match_result, enhanced_fragrances, character_analysis
                     )
 
+            if self.require_llm:
+                raise RuntimeError("Fragrance matching LLM response was not valid JSON.")
+
             print(f"⚠️ LLM 匹配失敗，使用備用邏輯")
             return self._generate_smart_recommendations(
                 enhanced_fragrances, character_analysis, num_recommendations
@@ -677,8 +833,10 @@ class CharacterAnalyzer:
 
         except Exception as e:
             print(f"❌ 香水匹配錯誤: {str(e)}")
+            if self.require_llm:
+                raise
             return self._generate_smart_recommendations(
-                enhanced_fragrances if "enhanced_fragrances" in locals() else [],
+                enhanced_fragrances,
                 character_analysis,
                 num_recommendations,
             )
@@ -693,7 +851,7 @@ class CharacterAnalyzer:
         for i, rec in enumerate(recommendations):
             fragrance_id = rec.get("fragrance_id")
             rationale = rec.get(
-                "rationale", "This fragrance matches the character's unique style."
+                "rationale", "This fragrance matches the requested scene and atmosphere."
             )
 
             # 尋找對應的香水
@@ -829,11 +987,14 @@ class CharacterAnalyzer:
                     "accords": ", ".join(fragrance.get("Accords", [])),
                 }
             )
+            content = self._require_llm_content(content, "Description generation")
 
             if content:
                 return content.strip()
 
         except Exception as e:
             print(f"Description generation error: {str(e)}")
+            if self.require_llm:
+                raise
 
         return f"{fragrance['Name']} by {fragrance.get('Brand', 'Unknown Brand')} is a captivating fragrance that embodies elegance and sophistication. This unique scent offers a harmonious blend of carefully selected notes that create an unforgettable olfactory experience."

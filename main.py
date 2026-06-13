@@ -7,6 +7,7 @@ import uvicorn
 import logging
 import json
 import os
+import re
 import time
 from time import perf_counter_ns
 
@@ -102,6 +103,47 @@ def _write_metrics(metrics: LatencyMetrics, prompt_text: Optional[str] = None, e
 
 def _latency_ms(start_ns: int, end_ns: int) -> float:
     return (end_ns - start_ns) / 1_000_000
+
+def _candidate_limit() -> int:
+    try:
+        return max(1, int(os.getenv("FRAGRANCE_CANDIDATE_LIMIT", "500")))
+    except ValueError:
+        return 500
+
+def _rerank_top_k() -> int:
+    try:
+        return max(1, int(os.getenv("FRAGRANCE_RERANK_TOP_K", "5")))
+    except ValueError:
+        return 5
+
+def _retrieval_terms(scene_prompt: str, scene_analysis: Dict[str, Any]) -> List[str]:
+    stop_words = {
+        "about", "after", "before", "fragrance", "looking", "notes",
+        "perfect", "reading", "scent", "something", "that", "this",
+        "with", "would",
+    }
+    prompt_terms = re.findall(r"[a-zA-Z][a-zA-Z-]{2,}", scene_prompt.lower())
+    analysis_terms = (
+        scene_analysis.get("traits", [])
+        + scene_analysis.get("style", [])
+    )
+    terms = [
+        str(term).strip().lower()
+        for term in analysis_terms + prompt_terms
+        if str(term).strip().lower() not in stop_words
+    ]
+
+    synonym_map = {
+        "paper-like": ["paper", "papyrus"],
+        "earthy": ["earth", "soil", "moss", "patchouli", "vetiver"],
+        "damp": ["moss", "aquatic", "mineral"],
+        "woody": ["wood", "cedar", "sandalwood"],
+        "rainy": ["aquatic", "ozonic", "mineral"],
+    }
+    for term in list(terms):
+        terms.extend(synonym_map.get(term, []))
+
+    return list(dict.fromkeys(terms))
 
 # 啟動事件
 @app.on_event("startup")
@@ -284,11 +326,20 @@ def get_smart_recommendations(request: SmartInputRequest):
         
         # 第3步：獲取香水資料
         start_retrieval = perf_counter_ns()
-        fragrances = data_handler.get_all_fragrances(limit=20)  # 限制數量以提高速度
+        fragrances = data_handler.get_relevant_fragrances(
+            _retrieval_terms(scene_prompt, scene_analysis),
+            limit=_candidate_limit(),
+        )
+        ranked_fragrances = analyzer.rank_fragrances_locally(
+            scene_prompt,
+            scene_analysis,
+            fragrances,
+            top_k=_rerank_top_k(),
+        )
         end_retrieval = perf_counter_ns()
         retrieval_latency = _latency_ms(start_retrieval, end_retrieval)
         
-        if not fragrances:
+        if not ranked_fragrances:
             return JSONResponse(
                 content={
                     "success": False,
@@ -301,14 +352,17 @@ def get_smart_recommendations(request: SmartInputRequest):
                 media_type="application/json; charset=utf-8"
             )
         
-        logger.info(f"獲取到 {len(fragrances)} 個香水進行匹配")
+        logger.info(
+            f"MongoDB 候選 {len(fragrances)} 筆，"
+            f"本地排序後取 top {len(ranked_fragrances)} 進行 LLM 匹配"
+        )
         
         # 第4步：匹配香水
         start_llm = perf_counter_ns()
         analyzer.reset_generation_metrics()
         match_result = analyzer.match_fragrances(
             scene_analysis, 
-            fragrances, 
+            ranked_fragrances,
             request.num_recommendations
         )
         
@@ -413,20 +467,32 @@ def get_recommendations(request: RecommendationRequest):
         
         # 2. 獲取香水資料
         start_retrieval = perf_counter_ns()
-        fragrances = data_handler.get_all_fragrances(limit=20)
+        fragrances = data_handler.get_relevant_fragrances(
+            _retrieval_terms(scene_prompt, scene_analysis),
+            limit=_candidate_limit(),
+        )
+        ranked_fragrances = analyzer.rank_fragrances_locally(
+            scene_prompt,
+            scene_analysis,
+            fragrances,
+            top_k=_rerank_top_k(),
+        )
         end_retrieval = perf_counter_ns()
         retrieval_latency = _latency_ms(start_retrieval, end_retrieval)
-        if not fragrances:
+        if not ranked_fragrances:
             raise HTTPException(status_code=500, detail="無法獲取香水資料")
         
-        logger.info(f"已獲取 {len(fragrances)} 筆香水資料")
+        logger.info(
+            f"MongoDB 候選 {len(fragrances)} 筆，"
+            f"本地排序後取 top {len(ranked_fragrances)} 進行 LLM 匹配"
+        )
         
         # 3. 匹配香水 (使用同步版本，取得3個推薦)
         start_llm = perf_counter_ns()
         analyzer.reset_generation_metrics()
         match_result = analyzer.match_fragrances(
             scene_analysis,
-            fragrances,
+            ranked_fragrances,
             num_recommendations=request.num_recommendations
         )
         

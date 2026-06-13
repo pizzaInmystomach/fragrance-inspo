@@ -6,7 +6,7 @@ from langchain_groq import ChatGroq
 load_dotenv()
 
 
-def get_groq_model(model_name="llama-3.1-8b-instant", temperature=0.7):
+def get_groq_model(model_name=None, temperature=0.7):
     """
     獲取 Groq 模型實例
 
@@ -33,9 +33,13 @@ def get_groq_model(model_name="llama-3.1-8b-instant", temperature=0.7):
         if not groq_api_key:
             raise ValueError("找不到 GROQ_API_KEY 環境變數，請在 .env 檔案中設定")
 
+        selected_model = model_name or os.getenv(
+            "GROQ_BALANCED_MODEL", "llama-3.3-70b-versatile"
+        )
+
         return ChatGroq(
             groq_api_key=groq_api_key,
-            model_name=model_name,
+            model_name=selected_model,
             temperature=temperature,
             max_tokens=None,  # 讓模型自動決定
             timeout=None,
@@ -53,17 +57,26 @@ def get_groq_model(model_name="llama-3.1-8b-instant", temperature=0.7):
 
 def get_fast_model():
     """獲取最快的模型（適合快速回應）"""
-    return get_groq_model(model_name="llama-3.1-8b-instant", temperature=0.5)
+    return get_groq_model(
+        model_name=os.getenv("GROQ_FAST_MODEL", "llama-3.1-8b-instant"),
+        temperature=0.5,
+    )
 
 
 def get_smart_model():
     """獲取最聰明的模型（適合複雜分析）"""
-    return get_groq_model(model_name="llama-3.3-70b-versatile", temperature=0.7)
+    return get_groq_model(
+        model_name=os.getenv("GROQ_SMART_MODEL", "llama-3.3-70b-versatile"),
+        temperature=0.7,
+    )
 
 
 def get_balanced_model():
     """獲取平衡的模型（速度和性能兼顧）"""
-    return get_groq_model(model_name="llama-3.3-70b-versatile", temperature=0.6)
+    return get_groq_model(
+        model_name=os.getenv("GROQ_BALANCED_MODEL", "llama-3.3-70b-versatile"),
+        temperature=0.6,
+    )
 
 
 def get_reasoning_model():

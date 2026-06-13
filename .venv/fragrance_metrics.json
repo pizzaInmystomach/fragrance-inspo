@@ -46,5 +46,65 @@
       "end_to_end_latency_ms": 11675.45,
       "generation_throughput_tokens_sec": 83.99
     }
+  },
+  {
+    "timestamp": 1781175674.442401,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 823.85,
+      "retrieval_latency_ms": 2.27,
+      "llm_generation_latency_ms": 18844.58,
+      "end_to_end_latency_ms": 19670.81,
+      "generation_throughput_tokens_sec": 145.4
+    }
+  },
+  {
+    "timestamp": 1781175970.1740549,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 812.64,
+      "retrieval_latency_ms": 5.47,
+      "llm_generation_latency_ms": 15660.25,
+      "end_to_end_latency_ms": 16478.53,
+      "generation_throughput_tokens_sec": 174.14
+    }
+  },
+  {
+    "timestamp": 1781176830.4771671,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 848.13,
+      "retrieval_latency_ms": 4.09,
+      "llm_generation_latency_ms": 17611.15,
+      "end_to_end_latency_ms": 18463.57,
+      "generation_throughput_tokens_sec": 155.3
+    }
+  },
+  {
+    "timestamp": 1781177343.090685,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 802.39,
+      "retrieval_latency_ms": 4.19,
+      "llm_generation_latency_ms": 116728.0,
+      "end_to_end_latency_ms": 117534.77,
+      "generation_throughput_tokens_sec": 48.34
+    }
+  },
+  {
+    "timestamp": 1781349921.073726,
+    "prompt": "I am looking for a woody fragrance with notes of earth and old book pages–perfect for reading in the library on a rainy day.",
+    "endpoint": "/api/recommend-smart",
+    "metrics": {
+      "embedding_latency_ms": 984.23,
+      "retrieval_latency_ms": 49.8,
+      "llm_generation_latency_ms": 4654.61,
+      "end_to_end_latency_ms": 5688.75,
+      "generation_throughput_tokens_sec": 175.53
+    }
   }
 ]

@@ -45,7 +45,7 @@ IMPORTANT: Respond ONLY the valid JSON in this exact format:
 {{
   "traits": ["trait1", "trait2", "trait3", "trait4", "trait5"],
   "style": ["style1", "style2", "style3"],
-  "analysis": "Character analysis description here..."
+  "analysis": "Scene and scent atmosphere analysis description here..."
 }}
 
 Do not include any text before or after the JSON. Only return the JSON object.

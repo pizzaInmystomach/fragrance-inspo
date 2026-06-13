@@ -1,6 +1,8 @@
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
+import re
+import time
 from dotenv import load_dotenv
 
 # 載入環境變數
@@ -53,6 +55,106 @@ class DataHandler:
             return fragrances
         except Exception as e:
             print(f"獲取香水資料時發生錯誤: {e}")
+            return []
+
+    def get_fragrance_batches(self, batch_size=50, interval_seconds=1.0):
+        """分批遍歷整個香水集合，每批之間暫停指定秒數。"""
+        batch_size = max(1, int(batch_size))
+        interval_seconds = max(0.0, float(interval_seconds))
+        batches = []
+        last_id = None
+        batch_number = 0
+        total_count = 0
+
+        try:
+            while True:
+                query = {"_id": {"$gt": last_id}} if last_id is not None else {}
+                batch = list(
+                    self.collection.find(query)
+                    .sort("_id", 1)
+                    .limit(batch_size)
+                )
+
+                if not batch:
+                    break
+
+                batches.append(batch)
+                batch_number += 1
+                total_count += len(batch)
+                last_id = batch[-1]["_id"]
+                print(
+                    f"MongoDB 批次 {batch_number}: 取得 {len(batch)} 筆，"
+                    f"累計 {total_count} 筆"
+                )
+
+                if len(batch) < batch_size:
+                    break
+
+                if interval_seconds > 0:
+                    time.sleep(interval_seconds)
+
+            print(
+                f"MongoDB 分批遍歷完成，共 {batch_number} 批、"
+                f"{total_count} 筆香水資料"
+            )
+            return batches
+        except Exception as e:
+            print(f"分批獲取香水資料時發生錯誤: {e}")
+            return []
+
+    def get_relevant_fragrances(self, search_terms, limit=500):
+        """依 accords/notes 搜尋相關香水，並補足到固定候選數。"""
+        limit = max(1, int(limit))
+        normalized_terms = []
+
+        for term in search_terms:
+            cleaned = str(term).strip().lower()
+            if len(cleaned) >= 3 and cleaned not in normalized_terms:
+                normalized_terms.append(cleaned)
+
+        searchable_fields = [
+            "Accords",
+            "main_accords",
+            "top_notes",
+            "heart_notes",
+            "base_notes",
+            "Notes.Top Notes",
+            "Notes.Middle Notes",
+            "Notes.Heart Notes",
+            "Notes.Base Notes",
+        ]
+
+        try:
+            fragrances = []
+            if normalized_terms:
+                pattern = "|".join(re.escape(term) for term in normalized_terms)
+                query = {
+                    "$or": [
+                        {field: {"$regex": pattern, "$options": "i"}}
+                        for field in searchable_fields
+                    ]
+                }
+                fragrances = list(self.collection.find(query).limit(limit))
+
+            if len(fragrances) < limit:
+                remaining = limit - len(fragrances)
+                existing_ids = [fragrance["_id"] for fragrance in fragrances]
+                fill_query = (
+                    {"_id": {"$nin": existing_ids}}
+                    if existing_ids
+                    else {}
+                )
+                fragrances.extend(
+                    list(self.collection.find(fill_query).limit(remaining))
+                )
+
+            print(
+                f"MongoDB 情境檢索完成：關鍵詞 {normalized_terms}，"
+                f"取得 {len(fragrances)} 筆候選"
+            )
+            return fragrances
+        except Exception as e:
+            print(f"情境檢索香水資料時發生錯誤: {e}")
             return []
 
     def get_fragrance_by_id(self, fragrance_id):
