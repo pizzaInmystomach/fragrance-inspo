@@ -5,7 +5,7 @@ import numpy as np
 import pyarrow as pa
 from typing import List, Dict, Any
 
-from app.csv_loader import load_kaggle_fragrances
+from app.csv_loader import CSV_PATH, load_kaggle_fragrances
 from app.search_engine import HybridSearchEngine
 
 # 配置參數
@@ -75,7 +75,7 @@ def run_ingestion():
     table = None
 
     print("[系統訊息] 從 CSV 載入香水資料...")
-    all_schemas = load_kaggle_fragrances()
+    all_schemas = load_kaggle_fragrances(CSV_PATH)
     
     # 若 SAMPLE_FRACTION < 1.0，只取樣本資料進行測試
     if SAMPLE_FRACTION < 1.0:

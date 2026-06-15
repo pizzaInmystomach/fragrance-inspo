@@ -4,7 +4,7 @@ from typing import Dict, Iterable, List, Optional
 
 from .schemas import KaggleFragranceSchema
 
-CSV_PATH = Path(__file__).parent / "data" / "kaggle_fragrances.csv"
+CSV_PATH = Path(__file__).resolve().parents[1] / "data" / "fra_cleaned_with_id.csv"
 
 
 def _split_text_list(value: Optional[str]) -> List[str]:
@@ -17,7 +17,7 @@ def _parse_int(value: Optional[str]) -> Optional[int]:
     if not value:
         return None
     try:
-        return int(value)
+        return int(float(value.replace(",", ".")))
     except ValueError:
         return None
 
@@ -36,9 +36,9 @@ def _normalize_key(key: str) -> str:
 
 
 def _row_to_schema(row: Dict[str, str]) -> KaggleFragranceSchema:
-    normalized = { _normalize_key(k): (v or "").strip() for k, v in row.items() }
+    normalized = {_normalize_key(k): (v or "").strip() for k, v in row.items()}
     return KaggleFragranceSchema(
-        id=normalized.get("perfume", "") or normalized.get("url", ""),
+        id=normalized.get("id", ""),
         url=normalized.get("url", ""),
         brand=normalized.get("brand", ""),
         name=normalized.get("perfume", ""),
@@ -60,13 +60,34 @@ def _row_to_schema(row: Dict[str, str]) -> KaggleFragranceSchema:
 
 def load_kaggle_fragrances(csv_path: Path = CSV_PATH) -> List[KaggleFragranceSchema]:
     """從 CSV 載入香水資料並轉換成 KaggleFragranceSchema。"""
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Fragrance CSV not found: {csv_path}")
+
     fragrances: List[KaggleFragranceSchema] = []
-    # 嘗試多種編碼以避免因 CSV 含特殊字元導致的解碼錯誤
-    encodings_to_try = ["utf-8", "utf-8-sig", "cp1252", "latin-1"]
+    encodings_to_try = ["utf-8-sig", "utf-8", "cp1252", "latin-1"]
     for enc in encodings_to_try:
         try:
             with csv_path.open("r", encoding=enc, newline="") as fp:
-                reader = csv.DictReader(fp, delimiter=";")
+                sample = fp.read(4096)
+                fp.seek(0)
+                try:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=",;")
+                except csv.Error:
+                    dialect = csv.excel
+                reader = csv.DictReader(fp, dialect=dialect)
+                fieldnames = {
+                    _normalize_key(name)
+                    for name in (reader.fieldnames or [])
+                    if name is not None
+                }
+                required_fields = {"id", "perfume", "brand"}
+                missing_fields = required_fields - fieldnames
+                if missing_fields:
+                    raise ValueError(
+                        f"{csv_path} is missing required columns: "
+                        f"{', '.join(sorted(missing_fields))}"
+                    )
                 for row in reader:
                     fragrances.append(_row_to_schema(row))
             print(f"[CSV] 使用編碼 {enc} 成功讀取 {len(fragrances)} 筆資料")
@@ -76,9 +97,15 @@ def load_kaggle_fragrances(csv_path: Path = CSV_PATH) -> List[KaggleFragranceSch
             fragrances = []
             continue
 
-    # 最後保守 fallback：以 utf-8 並使用 errors='replace' 讀取（會替換無法解碼字元）
+    # 最後保守 fallback：替換無法解碼字元，但仍驗證 canonical ID 欄位。
     with csv_path.open("r", encoding="utf-8", errors="replace", newline="") as fp:
-        reader = csv.DictReader(fp, delimiter=";")
+        sample = fp.read(4096)
+        fp.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;")
+        except csv.Error:
+            dialect = csv.excel
+        reader = csv.DictReader(fp, dialect=dialect)
         for row in reader:
             fragrances.append(_row_to_schema(row))
     print(f"[CSV] 使用 utf-8 + errors=replace 讀取，得到 {len(fragrances)} 筆資料（含替換字元）")

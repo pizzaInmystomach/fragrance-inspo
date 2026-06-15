@@ -1,0 +1,21 @@
+{
+  "evaluated_queries": 50,
+  "retrieval_quality": {
+    "mrr": 0.13,
+    "hit_at_3": 0.14,
+    "hit_at_5": 0.18,
+    "recall_at_3": 0.056333333333333326,
+    "recall_at_5": 0.07033333333333333,
+    "ndcg_at_3": 0.08936044384929533,
+    "ndcg_at_5": 0.08644628978508344
+  },
+  "latency": {
+    "end_to_end_ms": 13373.5972,
+    "embedding_ms": 31.503200000000003,
+    "bm25_ms": 17.2802,
+    "hnsw_ms": 13.963199999999999,
+    "rrf_ms": 0.027999999999999997,
+    "retrieval_total_ms": 17.734,
+    "llm_generation_ms": 13315.2512
+  }
+}
