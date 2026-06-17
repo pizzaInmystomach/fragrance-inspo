@@ -40,7 +40,7 @@ def build_document(row):
     middle_notes = normalize_list(row.get("Middle"))
     base_notes = normalize_list(row.get("Base"))
 
-    return {
+    document = {
         "url": row.get("url", "").strip(),
         "Name": row.get("Perfume", "").strip(),
         "Brand": row.get("Brand", "").strip(),
@@ -62,6 +62,10 @@ def build_document(row):
         "Accords": accords,
         "main_accords": accords,
     }
+    fragrance_id = row.get("id", "").strip()
+    if fragrance_id:
+        document["_id"] = fragrance_id
+    return document
 
 
 def import_csv(file_path, uri, db_name, collection_name, drop=False):
@@ -76,8 +80,11 @@ def import_csv(file_path, uri, db_name, collection_name, drop=False):
         collection.delete_many({})
         print(f"已清空集合 {db_name}.{collection_name}")
 
-    with open(file_path, encoding="utf-8") as f:
-        reader = csv.DictReader(f, delimiter=";")
+    with open(file_path, encoding="utf-8-sig", newline="") as f:
+        sample = f.read(4096)
+        f.seek(0)
+        dialect = csv.Sniffer().sniff(sample, delimiters=",;")
+        reader = csv.DictReader(f, dialect=dialect)
         docs = [build_document(row) for row in reader if row.get("Perfume")]
 
     if not docs:

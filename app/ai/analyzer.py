@@ -74,7 +74,7 @@ class CharacterAnalyzer:
         self.last_generation_tokens = 0
 
     def _extract_output_tokens(self, result):
-        """Best-effort extraction of output token count from LangChain/Groq responses."""
+        """Best-effort extraction of output token count from LangChain responses."""
         usage = getattr(result, "usage_metadata", None)
         if isinstance(usage, dict):
             output_tokens = usage.get("output_tokens")
@@ -113,7 +113,10 @@ class CharacterAnalyzer:
             except Exception as e:
                 error_msg = str(e).lower()
                 if "model_decommissioned" in error_msg or "decommissioned" in error_msg:
-                    print("LLM 模型已不可用，請更新 llm_config.py 或 GROQ_*_MODEL 環境變數。")
+                    print(
+                        "LLM 模型已不可用，請更新 llm_config.py "
+                        "或 GEMINI_*_MODEL 環境變數。"
+                    )
                     return {"content": None, "output_tokens": 0}
 
                 if "429" in error_msg or "rate limit" in error_msg:
@@ -145,7 +148,7 @@ class CharacterAnalyzer:
         if self.require_llm:
             raise RuntimeError(
                 f"{stage} requires a successful LLM response. "
-                "Check GROQ_API_KEY and GROQ_*_MODEL settings."
+                "Check GEMINI_API_KEY and GEMINI_*_MODEL settings."
             )
         return None
 

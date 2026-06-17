@@ -42,6 +42,8 @@ data_handler = None
 class RecommendationRequest(BaseModel):
     user_input: str
     num_recommendations: Optional[int] = 3
+    include_descriptions: bool = True
+    benchmark_retrieval_only: bool = False
 
 # 新增：智能輸入解析請求模型
 class SmartInputRequest(BaseModel):
@@ -457,7 +459,90 @@ def get_recommendations(request: RecommendationRequest):
             raise HTTPException(status_code=400, detail="user_input 不可為空")
 
         logger.info(f"開始處理情境推薦請求: {scene_prompt}")
-        
+
+        if request.benchmark_retrieval_only:
+            start_embedding = perf_counter_ns()
+            scene_analysis = {"traits": [], "style": []}
+            embedding_latency = _latency_ms(start_embedding, perf_counter_ns())
+
+            start_retrieval = perf_counter_ns()
+            fragrances = data_handler.get_relevant_fragrances(
+                _retrieval_terms(scene_prompt, scene_analysis),
+                limit=_candidate_limit(),
+            )
+            ranked_fragrances = analyzer.rank_fragrances_locally(
+                scene_prompt,
+                scene_analysis,
+                fragrances,
+                top_k=request.num_recommendations,
+            )
+            end_retrieval = perf_counter_ns()
+            retrieval_latency = _latency_ms(start_retrieval, end_retrieval)
+
+            enhanced_recommendations = []
+            for index, fragrance in enumerate(ranked_fragrances, start=1):
+                enhanced = analyzer._create_basic_enhanced_fragrance(fragrance)
+                enhanced_recommendations.append(
+                    {
+                        "rank": index,
+                        "fragrance": {
+                            "id": enhanced.get("id"),
+                            "name": enhanced.get("Name"),
+                            "brand": enhanced.get("Brand"),
+                            "accords": enhanced.get("Accords", []),
+                            "top_notes": enhanced.get("top_notes", []),
+                            "heart_notes": enhanced.get("heart_notes", []),
+                            "base_notes": enhanced.get("base_notes", []),
+                            "additional_traits": enhanced.get("additional_traits", []),
+                            "personality_match": enhanced.get(
+                                "personality_match", []
+                            ),
+                            "mood_description": enhanced.get(
+                                "mood_description", ""
+                            ),
+                            "season_suitability": enhanced.get(
+                                "season_suitability", []
+                            ),
+                            "time_of_day": enhanced.get("time_of_day", []),
+                        },
+                        "rationale": "Selected by the main branch local retrieval baseline.",
+                        "description": "",
+                        "match_score": 0,
+                    }
+                )
+
+            end_to_end_latency = _latency_ms(start_e2e, perf_counter_ns())
+            metrics_data = LatencyMetrics(
+                embedding_latency_ms=round(embedding_latency, 2),
+                retrieval_latency_ms=round(retrieval_latency, 2),
+                llm_generation_latency_ms=0.0,
+                end_to_end_latency_ms=round(end_to_end_latency, 2),
+                generation_throughput_tokens_sec=0.0,
+            )
+
+            try:
+                _write_metrics(
+                    metrics_data,
+                    scene_prompt,
+                    "/api/recommendations",
+                )
+            except Exception:
+                logger.exception("Failed to write metrics")
+
+            result = {
+                "scene": {
+                    "prompt": scene_prompt,
+                    **scene_analysis,
+                },
+                "recommendations": enhanced_recommendations,
+                "total_recommendations": len(enhanced_recommendations),
+                "timestamp": None,
+            }
+            return JSONResponse(
+                content=result,
+                media_type="application/json; charset=utf-8",
+            )
+
         # 1. 分析情境 (使用同步版本)
         start_embedding = perf_counter_ns()
         scene_analysis = analyzer.analyze_scene(scene_prompt)
@@ -506,7 +591,11 @@ def get_recommendations(request: RecommendationRequest):
         enhanced_recommendations = []
         for rec in recommendations:
             fragrance = rec["fragrance"]
-            description = analyzer.generate_description(fragrance)
+            description = (
+                analyzer.generate_description(fragrance)
+                if request.include_descriptions
+                else ""
+            )
             
             enhanced_rec = {
                 "rank": rec["rank"],
