@@ -11,6 +11,9 @@ downloads/
 eggs/
 .eggs/
 lib/
+!lib/
+!lib/retrieval/
+!lib/retrieval/*.js
 lib64/
 parts/
 sdist/
@@ -26,6 +29,7 @@ venv/
 env/
 ENV/
 .venv/
+.venv*/
 
 # Logs
 logs/

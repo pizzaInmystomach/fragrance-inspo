@@ -106,6 +106,7 @@ def evaluate(golden_rows: List[dict], result_rows: List[dict]) -> dict:
     latency_keys = (
         "end_to_end_ms",
         "embedding_ms",
+        "baseline_ms",
         "bm25_ms",
         "hnsw_ms",
         "rrf_ms",

@@ -12,8 +12,9 @@ from datetime import datetime
 import ollama
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from app.search_engine import HybridSearchEngine
+from app.retrieval.retrieve import retrieve
 
 try:
     import psutil
@@ -48,6 +49,7 @@ class RecommendRequest(BaseModel):
     query_type: Optional[str] = None
     branch: Optional[str] = None
     run_index: Optional[int] = Field(default=None, ge=1)
+    cache_state: Optional[str] = None
     top_k: int = Field(default=5, ge=1, le=50)
     return_metrics: bool = False
     return_retrieval_debug: bool = False
@@ -181,11 +183,320 @@ async def async_fts_search(table, text, limit):
     )
     return results, (perf_counter_ns() - started_at) / 1_000_000
 
+VALID_LLM_MODES = {"cloud", "local", "none"}
+VALID_BENCHMARK_MODES = {"retrieval_only", "e2e"}
+
+
+def _env_mode(name: str, default: str, valid_modes: set[str]) -> str:
+    value = os.getenv(name, default).strip().lower()
+    if value not in valid_modes:
+        raise ValueError(
+            f"Unknown {name}={value!r}. Expected one of: "
+            f"{', '.join(sorted(valid_modes))}."
+        )
+    return value
+
+
+def _experiment_config() -> dict:
+    benchmark_mode = _env_mode(
+        "BENCHMARK_MODE", "e2e", VALID_BENCHMARK_MODES
+    )
+    llm_mode = _env_mode("LLM_MODE", "local", VALID_LLM_MODES)
+    if benchmark_mode == "retrieval_only":
+        llm_mode = "none"
+    return {
+        "retriever_mode": _env_mode(
+            "RETRIEVER_MODE", "hybrid", {"baseline", "hybrid"}
+        ),
+        "llm_mode": llm_mode,
+        "benchmark_mode": benchmark_mode,
+    }
+
+
+def _zero_metrics() -> Dict[str, Any]:
+    return {
+        "end_to_end_ms": 0,
+        "embedding_ms": 0,
+        "baseline_ms": 0,
+        "bm25_ms": 0,
+        "hnsw_ms": 0,
+        "rrf_ms": 0,
+        "retrieval_total_ms": 0,
+        "llm_generation_ms": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "tokens_per_sec": 0,
+        "estimated_embedding_cost_saved_usd": 0,
+        "estimated_llm_generation_cost_saved_usd": 0,
+        "estimated_cost_saved_per_1000_queries_usd": 0,
+    }
+
+
+def _retrieval_debug(retrieval_result: dict, final_ids: Optional[List[str]] = None) -> dict:
+    debug = retrieval_result.get("debug") or {}
+    return {
+        "retrieved_ids": retrieval_result.get("retrievedIds", []),
+        "baseline_top_ids": debug.get("baseline_top_ids", []),
+        "bm25_top_ids": debug.get("bm25_top_ids", []),
+        "hnsw_top_ids": debug.get("hnsw_top_ids", []),
+        "rrf_top_ids": debug.get("rrf_top_ids", []),
+        "final_recommendation_ids": final_ids or [],
+    }
+
+
+def _context_text(results: List[dict]) -> str:
+    context = []
+    for item in results:
+        description = item.get("description", "")
+        context.append(
+            "ID: {id} | Brand: {brand} | Name: {name} | Accords: {accords} | "
+            "Top: {top} | Middle: {middle} | Base: {base} | Description: {description}".format(
+                id=item.get("id", ""),
+                brand=item.get("brand", ""),
+                name=item.get("name", ""),
+                accords=", ".join(item.get("accords") or []),
+                top=", ".join(item.get("top_notes") or []),
+                middle=", ".join(item.get("middle_notes") or []),
+                base=", ".join(item.get("base_notes") or []),
+                description=description,
+            )
+        )
+    return "\n---\n".join(context)
+
+
+def _generation_messages(query_text: str, retrieved_docs: List[dict]) -> List[dict]:
+    system_instruction = (
+        "You are a professional fragrance recommendation expert. Select exactly "
+        "3 fragrances from the candidate context. Do not invent fragrances. "
+        "Return only valid JSON with a recommendations array. Each object must "
+        "have string fields id, name, brand, and reason."
+    )
+    prompt = f"""
+User scent brief: "{query_text}"
+
+Candidate fragrance context:
+{_context_text(retrieved_docs)}
+
+Return exactly 3 recommendations from these candidates.
+"""
+    return [
+        {"role": "system", "content": system_instruction},
+        {"role": "user", "content": prompt},
+    ]
+
+
+def _extract_json_object(text: str) -> dict:
+    if not text:
+        raise ValueError("empty LLM response")
+    cleaned = text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    if cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start == -1 or end == -1 or end <= start:
+            raise
+        return json.loads(cleaned[start : end + 1])
+
+
+def _validate_llm_payload(response_content: str, candidate_ids: set[str]) -> LLMRecommendationPayload:
+    response_data = _extract_json_object(response_content)
+    candidate_payload = LLMRecommendationPayload(**response_data)
+    recommendation_ids = [
+        recommendation.id for recommendation in candidate_payload.recommendations
+    ]
+    invalid_ids = set(recommendation_ids) - candidate_ids
+    if invalid_ids:
+        raise ValueError(
+            f"recommendation IDs outside retrieved candidates: {sorted(invalid_ids)}"
+        )
+    if len(set(recommendation_ids)) != len(recommendation_ids):
+        raise ValueError("duplicate recommendation IDs")
+    return candidate_payload
+
+
+def _tokens_per_sec(output_tokens: int, duration_ns: int, fallback_ms: float) -> float:
+    seconds = duration_ns / 1_000_000_000 if duration_ns else fallback_ms / 1000.0
+    return output_tokens / seconds if seconds > 0 else 0.0
+
+
+async def _generate_local_recommendations(query_text: str, retrieved_docs: List[dict]) -> dict:
+    started_at = perf_counter_ns()
+    max_attempts = max(1, int(os.getenv("LLM_MAX_ATTEMPTS", "3")))
+    candidate_ids = set(_result_ids(retrieved_docs))
+    messages = _generation_messages(query_text, retrieved_docs)
+    llm_payload = None
+    input_tokens = 0
+    output_tokens = 0
+    eval_duration = 0
+    last_validation_error = None
+
+    for attempt in range(1, max_attempts + 1):
+        llm_response = await asyncio.to_thread(
+            ollama_client.chat,
+            model=os.getenv("OLLAMA_LLM_MODEL", "llama3:8b"),
+            messages=messages,
+            format=LLMRecommendationPayload.model_json_schema(),
+            options={"temperature": 0},
+        )
+        if isinstance(llm_response, dict):
+            response_content = llm_response.get("message", {}).get("content")
+            input_tokens += int(llm_response.get("prompt_eval_count", 0) or 0)
+            output_tokens += int(llm_response.get("eval_count", 0) or 0)
+            eval_duration += int(llm_response.get("eval_duration", 0) or 0)
+        else:
+            message_obj = getattr(llm_response, "message", None)
+            response_content = getattr(message_obj, "content", None)
+            input_tokens += int(getattr(llm_response, "prompt_eval_count", 0) or 0)
+            output_tokens += int(getattr(llm_response, "eval_count", 0) or 0)
+            eval_duration += int(getattr(llm_response, "eval_duration", 0) or 0)
+
+        try:
+            llm_payload = _validate_llm_payload(response_content or "", candidate_ids)
+            break
+        except Exception as error:
+            last_validation_error = error
+
+        logger.warning(
+            "Local LLM validation failed on attempt %s/%s: %s",
+            attempt,
+            max_attempts,
+            last_validation_error,
+        )
+        if attempt < max_attempts:
+            messages.extend(
+                [
+                    {"role": "assistant", "content": response_content or ""},
+                    {
+                        "role": "user",
+                        "content": (
+                            "The previous response was invalid. Return exactly 3 "
+                            "complete recommendation objects with ids copied from "
+                            "the candidate context."
+                        ),
+                    },
+                ]
+            )
+
+    llm_ms = (perf_counter_ns() - started_at) / 1_000_000
+    if llm_payload is None:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Local LLM returned invalid recommendations: {last_validation_error}",
+        )
+    return {
+        "payload": llm_payload,
+        "metrics": {
+            "llm_generation_ms": round(llm_ms, 2),
+            "llm_attempts": attempt,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "tokens_per_sec": round(
+                _tokens_per_sec(output_tokens, eval_duration, llm_ms), 2
+            ),
+        },
+    }
+
+
+def _extract_langchain_output_tokens(result) -> int:
+    usage = getattr(result, "usage_metadata", None)
+    if isinstance(usage, dict):
+        for key in ("output_tokens", "completion_tokens"):
+            if isinstance(usage.get(key), int):
+                return usage[key]
+
+    metadata = getattr(result, "response_metadata", None)
+    if isinstance(metadata, dict):
+        token_usage = metadata.get("token_usage", {})
+        if isinstance(token_usage, dict):
+            for key in ("completion_tokens", "output_tokens", "generated_tokens"):
+                if isinstance(token_usage.get(key), int):
+                    return token_usage[key]
+    return 0
+
+
+def _extract_langchain_input_tokens(result) -> int:
+    usage = getattr(result, "usage_metadata", None)
+    if isinstance(usage, dict):
+        for key in ("input_tokens", "prompt_tokens"):
+            if isinstance(usage.get(key), int):
+                return usage[key]
+
+    metadata = getattr(result, "response_metadata", None)
+    if isinstance(metadata, dict):
+        token_usage = metadata.get("token_usage", {})
+        if isinstance(token_usage, dict):
+            for key in ("prompt_tokens", "input_tokens"):
+                if isinstance(token_usage.get(key), int):
+                    return token_usage[key]
+    return 0
+
+
+async def _generate_cloud_recommendations(query_text: str, retrieved_docs: List[dict]) -> dict:
+    started_at = perf_counter_ns()
+    candidate_ids = set(_result_ids(retrieved_docs))
+
+    def _invoke_cloud():
+        from app.ai.llm_config import get_balanced_model
+
+        llm = get_balanced_model()
+        messages = _generation_messages(query_text, retrieved_docs)
+        return llm.invoke(messages)
+
+    result = await asyncio.to_thread(_invoke_cloud)
+    content = result.content if hasattr(result, "content") else str(result)
+    llm_payload = _validate_llm_payload(content, candidate_ids)
+    llm_ms = (perf_counter_ns() - started_at) / 1_000_000
+    input_tokens = _extract_langchain_input_tokens(result)
+    output_tokens = _extract_langchain_output_tokens(result)
+    return {
+        "payload": llm_payload,
+        "metrics": {
+            "llm_generation_ms": round(llm_ms, 2),
+            "llm_attempts": 1,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "tokens_per_sec": round(
+                output_tokens / (llm_ms / 1000.0) if llm_ms > 0 else 0.0,
+                2,
+            ),
+        },
+    }
+
+
+async def _generate_recommendations(llm_mode: str, query_text: str, retrieved_docs: List[dict]) -> dict:
+    if llm_mode == "none":
+        return {"payload": None, "metrics": {}}
+    if llm_mode == "local":
+        return await _generate_local_recommendations(query_text, retrieved_docs)
+    if llm_mode == "cloud":
+        return await _generate_cloud_recommendations(query_text, retrieved_docs)
+    raise ValueError(f"Unknown LLM_MODE={llm_mode!r}.")
+
+
+def _estimated_cost_metrics(metrics: dict, llm_mode: str) -> dict:
+    input_rate = float(os.getenv("CLOUD_INPUT_COST_PER_1M_TOKENS", "0.05"))
+    output_rate = float(os.getenv("CLOUD_OUTPUT_COST_PER_1M_TOKENS", "0.08"))
+    estimated_cloud_cost = (
+        metrics.get("input_tokens", 0) * input_rate
+        + metrics.get("output_tokens", 0) * output_rate
+    ) / 1_000_000
+    saved = 0.0 if llm_mode == "cloud" else estimated_cloud_cost
+    return {
+        "estimated_embedding_cost_saved_usd": 0,
+        "estimated_llm_generation_cost_saved_usd": round(saved, 8),
+        "estimated_cost_saved_per_1000_queries_usd": round(saved * 1000, 6),
+    }
+
 @app.post("/api/recommend")
 async def recommend_fragrances(request: RecommendRequest):
-    if engine is None or engine.table is None:
-        raise HTTPException(status_code=500, detail="本地檢索資料庫未就緒，請先執行階段三。")
-
     query_text = request.query_text()
     if not query_text:
         raise HTTPException(
@@ -200,6 +511,76 @@ async def recommend_fragrances(request: RecommendRequest):
     await sampler.start()
     
     try:
+        experiment_config = _experiment_config()
+        if experiment_config["retriever_mode"] == "hybrid" and (
+            engine is None or engine.table is None
+        ):
+            raise HTTPException(status_code=500, detail="本地檢索資料庫未就緒，請先執行階段三。")
+
+        retrieval_result = await retrieve(
+            query=query_text,
+            top_k=request.top_k,
+            engine=engine,
+            ollama_client=ollama_client,
+        )
+        retrieved_docs = retrieval_result.get("results", [])
+        if not retrieved_docs:
+            raise HTTPException(status_code=404, detail="找不到任何相關的香水資料。")
+
+        generation_result = await _generate_recommendations(
+            experiment_config["llm_mode"],
+            query_text,
+            retrieved_docs,
+        )
+        llm_payload = generation_result.get("payload")
+        recommendations = (
+            [
+                recommendation.model_dump()
+                if hasattr(recommendation, "model_dump")
+                else recommendation.dict()
+                for recommendation in llm_payload.recommendations
+            ]
+            if llm_payload is not None
+            else []
+        )
+        final_recommendation_ids = [
+            recommendation["id"] for recommendation in recommendations
+        ]
+
+        resource_metrics = await sampler.stop()
+        end_to_end_latency = (perf_counter_ns() - start_e2e) / 1_000_000
+        metrics = _zero_metrics()
+        metrics.update(retrieval_result.get("metrics") or {})
+        metrics.update(generation_result.get("metrics") or {})
+        metrics["end_to_end_ms"] = round(end_to_end_latency, 2)
+        metrics.update(
+            _estimated_cost_metrics(metrics, experiment_config["llm_mode"])
+        )
+
+        retrieval_debug = _retrieval_debug(
+            retrieval_result,
+            final_ids=final_recommendation_ids,
+        )
+        timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+        response = {
+            "request_id": request_id,
+            "timestamp": timestamp,
+            "query_id": request.query_id,
+            "query": query_text,
+            "query_type": request.query_type,
+            "run_index": request.run_index,
+            "cache_state": request.cache_state,
+            "branch": branch,
+            "experiment_config": experiment_config,
+            "metrics": {
+                **metrics,
+                **resource_metrics,
+            },
+            "retrieval_debug": retrieval_debug,
+            "recommendations": recommendations,
+        }
+        return response
+
         # 1. 將使用者輸入轉為向量 (耗時約數十毫秒)
         start_emb = perf_counter_ns()
         emb_res = await asyncio.to_thread(
