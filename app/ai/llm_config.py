@@ -63,7 +63,7 @@ def get_smart_model():
 
 def get_balanced_model():
     """獲取平衡的模型（速度和性能兼顧）"""
-    return get_groq_model(model_name="llama3-8b-8192", temperature=0.6)
+    return get_groq_model(model_name="llama-3.1-8b-instant", temperature=0.6)
 
 
 def get_reasoning_model():

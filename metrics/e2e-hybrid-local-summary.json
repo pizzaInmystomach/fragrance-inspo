@@ -1,0 +1,22 @@
+{
+  "evaluated_queries": 20,
+  "final_recommendation_quality": {
+    "hit_at_3": 0.2
+  },
+  "latency": {
+    "end_to_end_ms": 23265.126,
+    "retrieval_total_ms": 36.070499999999996,
+    "llm_generation_ms": 23148.017
+  },
+  "tokens": {
+    "tokens_per_sec": 14.927000000000001,
+    "input_tokens": 699.1,
+    "output_tokens": 206.7
+  },
+  "cost": {
+    "estimated_cost_per_query_usd": 5.1491000000000006e-05,
+    "estimated_cost_per_1000_queries_usd": 0.05149100000000001,
+    "estimated_cost_saved_per_query_usd": 5.1491000000000006e-05,
+    "estimated_cost_saved_per_1000_queries_usd": 0.051490999999999995
+  }
+}

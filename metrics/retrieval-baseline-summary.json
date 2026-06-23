@@ -1,0 +1,22 @@
+{
+  "evaluated_queries": 50,
+  "retrieval_quality": {
+    "mrr": 0.129,
+    "hit_at_3": 0.16,
+    "hit_at_5": 0.2,
+    "recall_at_3": 0.04766666666666666,
+    "recall_at_5": 0.073,
+    "ndcg_at_3": 0.07418811587822256,
+    "ndcg_at_5": 0.08478215094185648
+  },
+  "latency": {
+    "end_to_end_ms": 515.7986,
+    "embedding_ms": null,
+    "baseline_ms": 507.75480000000005,
+    "bm25_ms": null,
+    "hnsw_ms": null,
+    "rrf_ms": null,
+    "retrieval_total_ms": 507.76059999999995,
+    "llm_generation_ms": null
+  }
+}

@@ -7,8 +7,15 @@ from .hybrid_retriever import hybrid_retrieve
 VALID_RETRIEVER_MODES = {"baseline", "hybrid"}
 
 
-async def retrieve(query: str, top_k: int = 5, *, engine=None, ollama_client=None) -> dict:
-    mode = os.getenv("RETRIEVER_MODE", "hybrid").strip().lower()
+async def retrieve(
+    query: str,
+    top_k: int = 5,
+    *,
+    mode: str | None = None,
+    engine=None,
+    ollama_client=None,
+) -> dict:
+    mode = (mode or os.getenv("RETRIEVER_MODE", "hybrid")).strip().lower()
     if mode == "baseline":
         return baseline_retrieve(query=query, top_k=top_k)
     if mode == "hybrid":

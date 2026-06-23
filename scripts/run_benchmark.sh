@@ -5,10 +5,18 @@ set -euo pipefail
 RETRIEVER_MODE="${RETRIEVER_MODE:-hybrid}"
 LLM_MODE="${LLM_MODE:-local}"
 BENCHMARK_MODE="${BENCHMARK_MODE:-e2e}"
+if [[ "$BENCHMARK_MODE" == "retrieval_only" ]]; then
+  LLM_MODE="none"
+fi
 ENDPOINT="${ENDPOINT:-${1:-http://127.0.0.1:8000/api/recommend}}"
 REPEATS="${REPEATS:-${2:-1}}"
 TOP_K="${TOP_K:-5}"
 CACHE_STATE="${CACHE_STATE:-warm}"
+if [[ "$BENCHMARK_MODE" == "e2e" && "$LLM_MODE" == "cloud" ]]; then
+  BENCHMARK_SLEEP_SECONDS="${BENCHMARK_SLEEP_SECONDS:-15}"
+else
+  BENCHMARK_SLEEP_SECONDS="${BENCHMARK_SLEEP_SECONDS:-0}"
+fi
 
 if [[ "$BENCHMARK_MODE" == "retrieval_only" ]]; then
   DEFAULT_GOLDEN_PATH="data/golden_dataset.jsonl"
@@ -54,6 +62,11 @@ fi
   exit 1
 }
 
+[[ "$BENCHMARK_SLEEP_SECONDS" =~ ^[0-9]+([.][0-9]+)?$ ]] || {
+  echo "Error: BENCHMARK_SLEEP_SECONDS must be a non-negative number." >&2
+  exit 1
+}
+
 if [[ "$BENCHMARK_MODE" == "e2e" && ! -f "$GOLDEN_PATH" && "$GOLDEN_PATH" == "data/golden_dataset_e2e_20.jsonl" ]]; then
   "$PYTHON" scripts/create_e2e_subset.py
 fi
@@ -86,6 +99,7 @@ echo "Endpoint: $ENDPOINT"
 echo "Repeats: $REPEATS"
 echo "Top K: $TOP_K"
 echo "Cache state: $CACHE_STATE"
+echo "Query sleep seconds: $BENCHMARK_SLEEP_SECONDS"
 echo "Golden dataset: $GOLDEN_PATH"
 echo "Output: $OUT_PATH"
 echo "Summary: $SUMMARY_PATH"
@@ -108,6 +122,9 @@ for run_index in $(seq 1 "$REPEATS"); do
       --arg query "$query" \
       --arg query_type "$query_type" \
       --arg cache_state "$CACHE_STATE" \
+      --arg retriever_mode "$RETRIEVER_MODE" \
+      --arg llm_mode "$LLM_MODE" \
+      --arg benchmark_mode "$BENCHMARK_MODE" \
       --argjson top_k "$TOP_K" \
       --argjson run_index "$run_index" \
       '{
@@ -117,6 +134,9 @@ for run_index in $(seq 1 "$REPEATS"); do
         top_k: $top_k,
         return_metrics: true,
         return_retrieval_debug: true,
+        retriever_mode: $retriever_mode,
+        llm_mode: $llm_mode,
+        benchmark_mode: $benchmark_mode,
         run_index: $run_index,
         cache_state: $cache_state
       }'
@@ -131,9 +151,20 @@ for run_index in $(seq 1 "$REPEATS"); do
       -d "$payload"
     )
 
+    jq -e 'type == "object"' <<<"$response" >/dev/null || {
+      echo "Error: non-JSON-object API response for $query_id" >&2
+      printf '%s\n' "$response" >&2
+      exit 1
+    }
+
+    jq -e '(.experiment_config | type) == "object"' <<<"$response" >/dev/null || {
+      echo "Error: API response missing experiment_config for $query_id; response was not written." >&2
+      printf '%s\n' "$response" >&2
+      exit 1
+    }
+
     jq -e '
-      (.experiment_config | type == "object")
-      and (.recommendations | type == "array")
+      (.recommendations | type == "array")
       and (.metrics | type == "object")
       and (.retrieval_debug.retrieved_ids | type == "array")
     ' <<<"$response" >/dev/null || {
@@ -141,6 +172,33 @@ for run_index in $(seq 1 "$REPEATS"); do
       printf '%s\n' "$response" >&2
       exit 1
     }
+
+    jq -e \
+      --arg retriever_mode "$RETRIEVER_MODE" \
+      --arg llm_mode "$LLM_MODE" \
+      --arg benchmark_mode "$BENCHMARK_MODE" \
+      '
+        .experiment_config.retriever_mode == $retriever_mode
+        and .experiment_config.llm_mode == $llm_mode
+        and .experiment_config.benchmark_mode == $benchmark_mode
+      ' <<<"$response" >/dev/null || {
+        echo "Error: API experiment_config does not match requested benchmark config for $query_id" >&2
+        printf '%s\n' "$response" >&2
+        exit 1
+      }
+
+    if [[ "$BENCHMARK_MODE" == "retrieval_only" ]]; then
+      jq -e '
+        (.metrics.llm_generation_ms == null)
+        and (.metrics.input_tokens == null)
+        and (.metrics.output_tokens == null)
+        and (.metrics.tokens_per_sec == null)
+      ' <<<"$response" >/dev/null || {
+        echo "Error: retrieval-only response contains LLM metrics for $query_id" >&2
+        printf '%s\n' "$response" >&2
+        exit 1
+      }
+    fi
 
     jq -c \
       --arg query_id "$query_id" \
@@ -163,6 +221,11 @@ for run_index in $(seq 1 "$REPEATS"); do
           benchmark_mode: $benchmark_mode
         }
       }' <<<"$response" >> "$TMP_OUT_PATH"
+
+    if [[ "$BENCHMARK_SLEEP_SECONDS" != "0" && "$BENCHMARK_SLEEP_SECONDS" != "0.0" ]]; then
+      echo "Sleeping ${BENCHMARK_SLEEP_SECONDS}s before next query..."
+      sleep "$BENCHMARK_SLEEP_SECONDS"
+    fi
 
   done < "$GOLDEN_PATH"
 done

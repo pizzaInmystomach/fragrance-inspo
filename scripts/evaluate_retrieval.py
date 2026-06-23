@@ -2,7 +2,7 @@ import argparse
 import json
 import math
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 
 DEFAULT_GOLDEN_PATH = Path("data/golden_dataset.jsonl")
@@ -85,12 +85,59 @@ def average(values: List[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
+def average_or_none(values: List[float]) -> Optional[float]:
+    return sum(values) / len(values) if values else None
+
+
 def result_key(row: dict) -> str:
     return str(row.get("query_id") or row.get("query") or "").strip()
 
 
 def golden_key(row: dict) -> str:
     return str(row.get("query_id") or row.get("query") or "").strip()
+
+
+def experiment_config(row: dict) -> dict:
+    config = row.get("experiment_config")
+    if not isinstance(config, dict):
+        raise ValueError("Result row is missing experiment_config.")
+
+    requested = row.get("requested_experiment_config")
+    if isinstance(requested, dict):
+        expected = {
+            "retriever_mode": requested.get("retriever_mode"),
+            "llm_mode": "none"
+            if requested.get("benchmark_mode") == "retrieval_only"
+            else requested.get("llm_mode"),
+            "benchmark_mode": requested.get("benchmark_mode"),
+        }
+        actual = {
+            "retriever_mode": config.get("retriever_mode"),
+            "llm_mode": config.get("llm_mode"),
+            "benchmark_mode": config.get("benchmark_mode"),
+        }
+        if actual != expected:
+            raise ValueError(
+                f"Result row experiment_config {actual} does not match requested {expected}."
+            )
+    return config
+
+
+def validate_retrieval_only_row(row: dict) -> None:
+    config = experiment_config(row)
+    if config.get("benchmark_mode") != "retrieval_only":
+        raise ValueError(
+            "Retrieval evaluator received a non-retrieval-only result row: "
+            f"{config}."
+        )
+
+    metrics = row.get("metrics") or {}
+    for key in ("llm_generation_ms", "input_tokens", "output_tokens", "tokens_per_sec"):
+        value = row.get(key, metrics.get(key))
+        if value is not None and value != 0:
+            raise ValueError(
+                f"Retrieval-only result contains LLM metric {key}={value!r}."
+            )
 
 
 def evaluate(golden_rows: List[dict], result_rows: List[dict]) -> dict:
@@ -111,25 +158,19 @@ def evaluate(golden_rows: List[dict], result_rows: List[dict]) -> dict:
         "hnsw_ms",
         "rrf_ms",
         "retrieval_total_ms",
-        "llm_generation_ms",
     )
     latencies = {key: [] for key in latency_keys}
     evaluated_count = 0
 
     for result in result_rows:
+        validate_retrieval_only_row(result)
         golden = golden_by_key.get(result_key(result))
         if golden is None:
             continue
 
         relevance_by_id = relevant_map(golden)
         retrieval_debug = result.get("retrieval_debug") or {}
-        retrieved = (
-            result.get("retrieved_ids")
-            or result.get("rrf_top_ids")
-            or retrieval_debug.get("retrieved_ids")
-            or retrieval_debug.get("rrf_top_ids")
-            or []
-        )
+        retrieved = retrieval_debug.get("retrieved_ids") or result.get("retrieved_ids") or []
         retrieved = [str(fragrance_id) for fragrance_id in retrieved]
 
         quality["mrr"].append(reciprocal_rank(retrieved, relevance_by_id))
@@ -155,7 +196,8 @@ def evaluate(golden_rows: List[dict], result_rows: List[dict]) -> dict:
             key: average(values) for key, values in quality.items()
         },
         "latency": {
-            key: average(values) for key, values in latencies.items()
+            **{key: average_or_none(values) for key, values in latencies.items()},
+            "llm_generation_ms": None,
         },
     }
 
