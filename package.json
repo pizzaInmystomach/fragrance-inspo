@@ -12,7 +12,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/ying0607/fragrance-inspo/issues"
   },
@@ -25,6 +25,7 @@
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
     "jsonwebtoken": "^9.0.2",
+    "license-checker": "^25.0.1",
     "next-auth": "^4.24.11"
   }
 }

@@ -21,4 +21,4 @@ EXPOSE 8000
 ENV OLLAMA_HOST=http://host.docker.internal:11434
 
 # 啟動 Uvicorn 伺服器
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.api.server:app", "--host", "0.0.0.0", "--port", "8000"]

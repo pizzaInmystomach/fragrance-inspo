@@ -5,6 +5,12 @@
 三個香水推薦系統使用範例
 """
 
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from app.data_handler import DataHandler
 from app.ai.analyzer import CharacterAnalyzer
 import json

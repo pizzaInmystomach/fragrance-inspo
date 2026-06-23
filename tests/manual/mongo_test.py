@@ -1,7 +1,12 @@
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 # 載入環境變數
-load_dotenv()
+load_dotenv(PROJECT_ROOT / ".env")
 
 MONGO_URI = os.getenv("MONGO_URI")
 print(f"MongoDB URI: {MONGO_URI}")

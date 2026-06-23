@@ -6,10 +6,11 @@
 """
 
 import sys
-import os
+from pathlib import Path
 
 # 添加路徑以便導入模組
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from app.ai.analyzer import CharacterAnalyzer
